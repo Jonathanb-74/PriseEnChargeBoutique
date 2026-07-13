@@ -17,6 +17,8 @@ new class extends Component
      */
     public function updatePassword(): void
     {
+        abort_unless(Auth::user()->usesLocalAuth(), 403);
+
         try {
             $validated = $this->validate([
                 'current_password' => ['required', 'string', 'current_password'],

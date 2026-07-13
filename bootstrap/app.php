@@ -12,7 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // L'app tourne derriere Cloudflare : sans ca, Laravel ignore le X-Forwarded-Proto
+        // et pense que la requete est en HTTP, ce qui casse les cookies securises (session, CSRF).
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

@@ -24,9 +24,11 @@ class LoginForm extends Form
     /**
      * Attempt to authenticate the request's credentials.
      *
+     * Returns true if a two-factor challenge is required before the user is fully logged in.
+     *
      * @throws ValidationException
      */
-    public function authenticate(): void
+    public function authenticate(): bool
     {
         $this->ensureIsNotRateLimited();
 
@@ -39,6 +41,18 @@ class LoginForm extends Form
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        $user = Auth::user();
+
+        if ($user->hasTwoFactorEnabled()) {
+            Auth::logout();
+
+            session(['2fa.user_id' => $user->id, '2fa.remember' => $this->remember]);
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
