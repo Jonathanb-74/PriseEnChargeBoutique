@@ -1,6 +1,9 @@
 <div>
     <x-page-header title="Clients">
         <x-slot name="actions">
+            <a href="{{ route('clients.import') }}" wire:navigate class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-widest">
+                Importer
+            </a>
             <a href="{{ route('clients.create') }}" wire:navigate class="inline-flex items-center px-4 py-2 bg-gray-800 dark:bg-gray-200 rounded-md text-xs font-semibold text-white dark:text-gray-800 uppercase tracking-widest hover:bg-gray-700 dark:hover:bg-white">
                 Nouveau client
             </a>
@@ -29,6 +32,9 @@
                             {{ $client->type === 'pro' ? 'Pro' : 'Particulier' }}
                         </span>
                     </div>
+                    @if ($client->code_client)
+                        <div class="text-xs text-gray-400 dark:text-gray-500">Code : {{ $client->code_client }}</div>
+                    @endif
                     <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ $client->email }}</div>
                     <div class="text-sm text-gray-500 dark:text-gray-400">{{ $client->phone }}</div>
                 </a>
@@ -42,6 +48,7 @@
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead class="bg-gray-50 dark:bg-gray-900">
                     <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Code</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Nom</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email</th>
@@ -52,6 +59,7 @@
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     @forelse ($clients as $client)
                         <tr wire:key="client-{{ $client->id }}">
+                            <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{{ $client->code_client }}</td>
                             <td class="px-4 py-3">
                                 <a href="{{ route('clients.show', $client) }}" wire:navigate class="text-[rgb(var(--color-accent))] dark:text-[rgb(var(--color-accent))] font-medium">
                                     {{ $client->full_name }}
@@ -75,7 +83,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">Aucun client trouvé.</td>
+                            <td colspan="6" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">Aucun client trouvé.</td>
                         </tr>
                     @endforelse
                 </tbody>

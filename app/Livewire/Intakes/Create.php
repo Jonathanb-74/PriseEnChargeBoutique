@@ -2,10 +2,13 @@
 
 namespace App\Livewire\Intakes;
 
+use App\Mail\ClientNotificationMail;
 use App\Mail\IntakeCreated;
 use App\Models\Client;
 use App\Models\ClientNotification;
+use App\Models\EmailTemplate;
 use App\Models\Intake;
+use App\Models\IntakePhoto;
 use App\Models\IntakeStatusHistory;
 use App\Models\Machine;
 use App\Models\MachinePhoto;
@@ -71,7 +74,16 @@ class Create extends Component
     /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
     public array $newPhotos = [];
 
+    /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
+    public array $photoQueue = [];
+
     public string $reported_issue = '';
+
+    /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
+    public array $newIssuePhotos = [];
+
+    /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
+    public array $issuePhotoQueue = [];
 
     public string $cc_email = '';
 
@@ -155,12 +167,60 @@ class Create extends Component
         $this->selectedMachineId = null;
     }
 
+    /**
+     * A native <input multiple> replaces its whole selection every time the user picks files
+     * again, so we accumulate each batch into a persistent queue instead of overwriting it.
+     */
+    public function updatedNewPhotos(): void
+    {
+        $this->validateOnly('newPhotos.*', [
+            'newPhotos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        foreach ($this->newPhotos as $photo) {
+            $this->photoQueue[] = $photo;
+        }
+
+        $this->newPhotos = [];
+    }
+
+    public function removeQueuedPhoto(int $index): void
+    {
+        unset($this->photoQueue[$index]);
+        $this->photoQueue = array_values($this->photoQueue);
+    }
+
+    /**
+     * Same accumulate-on-select pattern as updatedNewPhotos(), but for photos of the reported
+     * issue itself (e.g. physical damage) rather than the machine's identification photos.
+     */
+    public function updatedNewIssuePhotos(): void
+    {
+        $this->validateOnly('newIssuePhotos.*', [
+            'newIssuePhotos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        foreach ($this->newIssuePhotos as $photo) {
+            $this->issuePhotoQueue[] = $photo;
+        }
+
+        $this->newIssuePhotos = [];
+    }
+
+    public function removeQueuedIssuePhoto(int $index): void
+    {
+        unset($this->issuePhotoQueue[$index]);
+        $this->issuePhotoQueue = array_values($this->issuePhotoQueue);
+    }
+
     protected function rules(): array
     {
         $rules = [
             'reported_issue' => ['nullable', 'string', 'max:2000'],
             'cc_email' => ['nullable', 'email', 'max:150'],
             'clientSignatureName' => ['required_with:clientSignatureData', 'nullable', 'string', 'max:150'],
+            'issuePhotoQueue' => ['array', 'max:10'],
+            'issuePhotoQueue.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
 
         if (! $this->selectedClientId) {
@@ -185,8 +245,8 @@ class Create extends Component
                 'm_serial_number' => ['nullable', 'string', 'max:150'],
                 'm_password' => ['nullable', 'string', 'max:255'],
                 'm_notes' => ['nullable', 'string', 'max:2000'],
-                'newPhotos' => ['array', 'max:10'],
-                'newPhotos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+                'photoQueue' => ['array', 'max:10'],
+                'photoQueue.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             ]);
         } else {
             $rules['selectedMachineId'] = ['required', 'integer'];
@@ -225,7 +285,7 @@ class Create extends Component
                     'notes' => $this->m_notes ?: null,
                 ]);
 
-                foreach ($this->newPhotos as $photo) {
+                foreach ($this->photoQueue as $photo) {
                     $path = $photo->store('machines/'.$machine->id, 'local');
 
                     MachinePhoto::create([
@@ -258,6 +318,19 @@ class Create extends Component
                 'changed_by' => Auth::id(),
                 'changed_at' => now(),
             ]);
+
+            foreach ($this->issuePhotoQueue as $photo) {
+                $path = $photo->store('intakes/'.$intake->id, 'local');
+
+                IntakePhoto::create([
+                    'intake_id' => $intake->id,
+                    'disk' => 'local',
+                    'path' => $path,
+                    'original_name' => $photo->getClientOriginalName(),
+                    'mime_type' => $photo->getMimeType(),
+                    'size' => $photo->getSize(),
+                ]);
+            }
 
             $signatureUpdates = [];
 
@@ -303,29 +376,45 @@ class Create extends Component
             return;
         }
 
-        $cc = array_filter([Auth::user()->email, $this->cc_email ?: null]);
+        $cc = array_values(array_filter([$this->cc_email ?: null]));
+        $bcc = [Auth::user()->email];
+
+        $templateId = Setting::get(Setting::INTAKE_CREATED_TEMPLATE_ID);
+        $template = $templateId ? EmailTemplate::find($templateId) : null;
+
+        if ($template) {
+            [$subject, $body] = $template->render([
+                'reference' => $intake->reference,
+                'client' => $intake->client->full_name,
+                'machine' => "{$intake->machine->brand} {$intake->machine->model}",
+                'statut' => $intake->status->label,
+                'panne' => $intake->reported_issue ?: 'Non précisé.',
+            ]);
+            $mailable = new ClientNotificationMail($subject, $body, $template->attach_pdf ? $intake : null, $template->email_title);
+            $templateKey = $template->key;
+        } else {
+            $subject = "Prise en charge {$intake->reference} enregistrée";
+            $mailable = new IntakeCreated($intake);
+            $templateKey = 'intake_created_default';
+        }
+
+        $notification = ClientNotification::create([
+            'intake_id' => $intake->id,
+            'template_key' => $templateKey,
+            'subject' => $subject,
+            'recipient_email' => $intake->client->email,
+            'cc' => $cc,
+            'bcc' => $bcc,
+            'sent_by' => Auth::id(),
+            'status' => 'queued',
+        ]);
+
+        $mailable->notificationId = $notification->id;
 
         try {
-            Mail::to($intake->client->email)->cc($cc)->send(new IntakeCreated($intake));
-
-            ClientNotification::create([
-                'intake_id' => $intake->id,
-                'template_key' => 'intake_created',
-                'subject' => "Prise en charge {$intake->reference} enregistrée",
-                'recipient_email' => $intake->client->email,
-                'cc' => array_values($cc),
-                'sent_by' => Auth::id(),
-                'sent_at' => now(),
-                'status' => 'sent',
-            ]);
+            Mail::to($intake->client->email)->cc($cc)->bcc($bcc)->send($mailable);
         } catch (\Throwable $e) {
-            ClientNotification::create([
-                'intake_id' => $intake->id,
-                'template_key' => 'intake_created',
-                'subject' => "Prise en charge {$intake->reference} enregistrée",
-                'recipient_email' => $intake->client->email,
-                'cc' => array_values($cc),
-                'sent_by' => Auth::id(),
+            $notification->update([
                 'status' => 'failed',
                 'error_message' => $e->getMessage(),
             ]);

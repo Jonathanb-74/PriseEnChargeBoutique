@@ -34,6 +34,9 @@ class Form extends Component
     /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
     public array $newPhotos = [];
 
+    /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
+    public array $photoQueue = [];
+
     public function mount(?Machine $machine = null, ?Client $client = null): void
     {
         if ($machine?->exists) {
@@ -60,16 +63,39 @@ class Form extends Component
             'serial_number' => ['nullable', 'string', 'max:150'],
             'password' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:2000'],
-            'newPhotos' => ['array', 'max:10'],
-            'newPhotos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'photoQueue' => ['array', 'max:10'],
+            'photoQueue.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
+    }
+
+    /**
+     * A native <input multiple> replaces its whole selection every time the user picks files
+     * again, so we accumulate each batch into a persistent queue instead of overwriting it.
+     */
+    public function updatedNewPhotos(): void
+    {
+        $this->validateOnly('newPhotos.*', [
+            'newPhotos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        foreach ($this->newPhotos as $photo) {
+            $this->photoQueue[] = $photo;
+        }
+
+        $this->newPhotos = [];
+    }
+
+    public function removeQueuedPhoto(int $index): void
+    {
+        unset($this->photoQueue[$index]);
+        $this->photoQueue = array_values($this->photoQueue);
     }
 
     public function save(): mixed
     {
         $data = $this->validate();
-        $photos = $data['newPhotos'] ?? [];
-        unset($data['newPhotos']);
+        $photos = $data['photoQueue'] ?? [];
+        unset($data['photoQueue']);
 
         if ($this->machine) {
             $this->machine->update($data);
@@ -91,7 +117,7 @@ class Form extends Component
             ]);
         }
 
-        $this->newPhotos = [];
+        $this->photoQueue = [];
 
         session()->flash('status', 'Machine enregistrée.');
 

@@ -20,10 +20,17 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'address_line2',
     'postal_code',
     'city',
+    'code_client',
+    'siret',
+    'actif',
 ])]
 class Client extends Model
 {
     use HasFactory, SoftDeletes;
+
+    protected $casts = [
+        'actif' => 'boolean',
+    ];
 
     public function getFullNameAttribute(): string
     {
@@ -57,7 +64,8 @@ class Client extends Model
                 ->orWhere('last_name', 'like', "%{$term}%")
                 ->orWhere('company_name', 'like', "%{$term}%")
                 ->orWhere('email', 'like', "%{$term}%")
-                ->orWhere('phone', 'like', "%{$term}%");
+                ->orWhere('phone', 'like', "%{$term}%")
+                ->orWhere('code_client', 'like', "%{$term}%");
         });
     }
 }

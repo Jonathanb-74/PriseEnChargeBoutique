@@ -11,6 +11,12 @@ class EmailTemplateSeeder extends Seeder
     {
         $templates = [
             [
+                'key' => 'prise_en_charge_creee',
+                'name' => 'Confirmation de prise en charge',
+                'subject' => 'Prise en charge {{reference}} enregistrée',
+                'body' => "Bonjour,\n\nNous vous confirmons la prise en charge de votre matériel ({{machine}}).\n\nRéférence : {{reference}}\nStatut : {{statut}}\nProblème signalé : {{panne}}\n\nNous reviendrons vers vous dès qu'il y aura du nouveau concernant votre matériel.",
+            ],
+            [
                 'key' => 'en_cours',
                 'name' => 'Réparation en cours',
                 'subject' => 'Votre prise en charge {{reference}} est en cours de traitement',

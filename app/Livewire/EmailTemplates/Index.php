@@ -3,6 +3,7 @@
 namespace App\Livewire\EmailTemplates;
 
 use App\Models\EmailTemplate;
+use App\Models\Setting;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -16,13 +17,21 @@ class Index extends Component
 
     public string $subject = '';
 
+    public string $email_title = '';
+
     public string $body = '';
 
     public bool $is_active = true;
 
+    public bool $attach_pdf = false;
+
+    public string $emailSignature = '';
+
     public function mount(): void
     {
         $this->authorize('viewAny', EmailTemplate::class);
+
+        $this->emailSignature = Setting::get(Setting::EMAIL_SIGNATURE, '');
     }
 
     protected function rules(): array
@@ -30,8 +39,10 @@ class Index extends Component
         return [
             'name' => ['required', 'string', 'max:100'],
             'subject' => ['required', 'string', 'max:255'],
+            'email_title' => ['nullable', 'string', 'max:150'],
             'body' => ['required', 'string', 'max:5000'],
             'is_active' => ['boolean'],
+            'attach_pdf' => ['boolean'],
         ];
     }
 
@@ -42,13 +53,15 @@ class Index extends Component
         $this->editingId = $template->id;
         $this->name = $template->name;
         $this->subject = $template->subject;
+        $this->email_title = $template->email_title ?? '';
         $this->body = $template->body;
         $this->is_active = $template->is_active;
+        $this->attach_pdf = $template->attach_pdf;
     }
 
     public function cancelEdit(): void
     {
-        $this->reset(['editingId', 'name', 'subject', 'body', 'is_active']);
+        $this->reset(['editingId', 'name', 'subject', 'email_title', 'body', 'is_active', 'attach_pdf']);
     }
 
     public function save(): void
@@ -73,6 +86,19 @@ class Index extends Component
         $this->authorize('delete', $template);
 
         $template->delete();
+    }
+
+    public function saveSignature(): void
+    {
+        $this->authorize('viewAny', EmailTemplate::class);
+
+        $this->validate([
+            'emailSignature' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        Setting::set(Setting::EMAIL_SIGNATURE, $this->emailSignature ?: null);
+
+        session()->flash('status', 'Signature enregistrée.');
     }
 
     public function render()

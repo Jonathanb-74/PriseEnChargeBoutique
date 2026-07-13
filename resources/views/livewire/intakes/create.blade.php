@@ -158,16 +158,25 @@
                         </div>
 
                         <div>
-                            <x-input-label for="newPhotos" value="Photos de la machine" />
+                            <x-input-label for="newPhotos" value="Photos de l'étiquette / numéro de série" />
                             <input type="file" id="newPhotos" wire:model="newPhotos" multiple accept="image/png,image/jpeg,image/webp"
                                 class="mt-1 block w-full text-sm text-gray-600 dark:text-gray-300" />
                             <div wire:loading wire:target="newPhotos" class="text-xs text-gray-500 dark:text-gray-400 mt-1">Chargement…</div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Photos d'identification de la machine (étiquette constructeur, numéro de série). Vous pouvez sélectionner des photos plusieurs fois de suite, elles s'ajoutent à la liste.</p>
                             <x-input-error :messages="$errors->get('newPhotos.*')" class="mt-2" />
+                            <x-input-error :messages="$errors->get('photoQueue')" class="mt-2" />
+                            <x-input-error :messages="$errors->get('photoQueue.*')" class="mt-2" />
 
-                            @if ($newPhotos)
+                            @if ($photoQueue)
                                 <div class="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3">
-                                    @foreach ($newPhotos as $photo)
-                                        <img src="{{ $photo->temporaryUrl() }}" class="h-20 w-full object-cover rounded-md">
+                                    @foreach ($photoQueue as $index => $photo)
+                                        <div class="relative group" wire:key="queued-{{ $index }}">
+                                            <img src="{{ $photo->temporaryUrl() }}" class="h-20 w-full object-cover rounded-md">
+                                            <button type="button" wire:click="removeQueuedPhoto({{ $index }})"
+                                                class="absolute top-1 right-1 bg-red-600 text-white rounded-full h-5 w-5 text-xs leading-5 text-center">
+                                                ×
+                                            </button>
+                                        </div>
                                     @endforeach
                                 </div>
                             @endif
@@ -178,10 +187,35 @@
             </div>
 
             {{-- PANNE --}}
-            <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-4 sm:p-6">
-                <h3 class="font-medium text-gray-900 dark:text-gray-100 mb-4">3. Panne signalée</h3>
+            <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-4 sm:p-6 space-y-4">
+                <h3 class="font-medium text-gray-900 dark:text-gray-100">3. Panne signalée</h3>
                 <textarea wire:model="reported_issue" rows="4" placeholder="Description du problème signalé par le client…"
                     class="block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm focus:border-[rgb(var(--color-accent))] focus:ring-[rgb(var(--color-accent))]"></textarea>
+
+                <div>
+                    <x-input-label for="newIssuePhotos" value="Photos du problème / dommage constaté" />
+                    <input type="file" id="newIssuePhotos" wire:model="newIssuePhotos" multiple accept="image/png,image/jpeg,image/webp"
+                        class="mt-1 block w-full text-sm text-gray-600 dark:text-gray-300" />
+                    <div wire:loading wire:target="newIssuePhotos" class="text-xs text-gray-500 dark:text-gray-400 mt-1">Chargement…</div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Ex. écran cassé, dégât des eaux… Vous pouvez sélectionner des photos plusieurs fois de suite, elles s'ajoutent à la liste.</p>
+                    <x-input-error :messages="$errors->get('newIssuePhotos.*')" class="mt-2" />
+                    <x-input-error :messages="$errors->get('issuePhotoQueue')" class="mt-2" />
+                    <x-input-error :messages="$errors->get('issuePhotoQueue.*')" class="mt-2" />
+
+                    @if ($issuePhotoQueue)
+                        <div class="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3">
+                            @foreach ($issuePhotoQueue as $index => $photo)
+                                <div class="relative group" wire:key="queued-issue-{{ $index }}">
+                                    <img src="{{ $photo->temporaryUrl() }}" class="h-20 w-full object-cover rounded-md">
+                                    <button type="button" wire:click="removeQueuedIssuePhoto({{ $index }})"
+                                        class="absolute top-1 right-1 bg-red-600 text-white rounded-full h-5 w-5 text-xs leading-5 text-center">
+                                        ×
+                                    </button>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
             </div>
 
             {{-- NOTIFICATION --}}

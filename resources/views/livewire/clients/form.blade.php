@@ -6,6 +6,20 @@
             <form wire:submit="save" class="space-y-4">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
+                        <x-input-label for="code_client" value="Code client" />
+                        <x-text-input id="code_client" type="text" class="mt-1 block w-full" wire:model="code_client" />
+                        <x-input-error :messages="$errors->get('code_client')" class="mt-2" />
+                    </div>
+                    <div class="flex items-end pb-2">
+                        <label class="inline-flex items-center gap-2">
+                            <input type="checkbox" wire:model="actif" class="rounded border-gray-300 dark:border-gray-700 text-[rgb(var(--color-accent))] focus:ring-[rgb(var(--color-accent))]" />
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Client actif</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
                         <x-input-label for="type" value="Type de client" />
                         <select id="type" wire:model="type" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-[rgb(var(--color-accent))] focus:ring-[rgb(var(--color-accent))] rounded-md shadow-sm">
                             <option value="particulier">Particulier</option>
@@ -22,6 +36,14 @@
                         </div>
                     @endif
                 </div>
+
+                @if ($type === 'pro')
+                    <div>
+                        <x-input-label for="siret" value="SIRET" />
+                        <x-text-input id="siret" type="text" class="mt-1 block w-full" wire:model="siret" />
+                        <x-input-error :messages="$errors->get('siret')" class="mt-2" />
+                    </div>
+                @endif
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>

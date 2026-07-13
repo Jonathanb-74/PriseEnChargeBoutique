@@ -1,6 +1,5 @@
-<x-mail::message>
+<x-mail::message :mail-title="$emailTitle ?? null">
 {!! nl2br(e($body)) !!}
 
-Cordialement,<br>
-{{ config('app.name') }}
+{!! nl2br(e(\App\Models\Setting::emailSignature())) !!}
 </x-mail::message>

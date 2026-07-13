@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'subject',
     'recipient_email',
     'cc',
+    'bcc',
     'sent_by',
     'sent_at',
     'status',
@@ -23,6 +24,7 @@ class ClientNotification extends Model
     {
         return [
             'cc' => 'array',
+            'bcc' => 'array',
             'sent_at' => 'datetime',
         ];
     }

@@ -53,3 +53,27 @@ test('admin can upload and remove a custom logo', function () {
     Storage::disk('public')->assertMissing($path);
     expect(Setting::get(Setting::BRAND_LOGO_PATH))->toBeNull();
 });
+
+test('the pdf logo falls back to the app logo, and can be set and removed independently', function () {
+    $this->actingAs($this->admin);
+
+    expect(Setting::pdfLogoPath())->toBeNull();
+
+    $appLogo = UploadedFile::fake()->image('app-logo.png', 100, 100)->size(20);
+    Livewire::test(SettingsIndex::class)->set('newLogo', $appLogo)->call('save');
+
+    expect(Setting::pdfLogoPath())->not->toBeNull();
+
+    $pdfLogo = UploadedFile::fake()->image('pdf-logo.png', 100, 100)->size(20);
+    Livewire::test(SettingsIndex::class)->set('newPdfLogo', $pdfLogo)->call('save')->assertHasNoErrors();
+
+    $pdfPath = Setting::get(Setting::PDF_LOGO_PATH);
+    expect($pdfPath)->not->toBeNull();
+    Storage::disk('public')->assertExists($pdfPath);
+
+    Livewire::test(SettingsIndex::class)->call('removePdfLogo');
+
+    Storage::disk('public')->assertMissing($pdfPath);
+    // Falls back to the app logo once the PDF-specific one is removed.
+    expect(Setting::pdfLogoPath())->not->toBeNull();
+});

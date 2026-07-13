@@ -1,5 +1,11 @@
 <div>
-    <x-page-header :title="$client->full_name">
+    <x-page-header>
+        <x-slot name="title">
+            {{ $client->full_name }}
+            @unless ($client->actif)
+                <span class="ml-2 align-middle text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Inactif</span>
+            @endunless
+        </x-slot>
         <x-slot name="actions">
             <a href="{{ route('clients.edit', $client) }}" wire:navigate class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-widest">
                 Modifier
@@ -19,10 +25,17 @@
 
         <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
+                <div class="text-xs uppercase text-gray-500 dark:text-gray-400">Code client</div>
+                <div class="text-sm text-gray-900 dark:text-gray-100">{{ $client->code_client ?: '—' }}</div>
+            </div>
+            <div>
                 <div class="text-xs uppercase text-gray-500 dark:text-gray-400">Type</div>
                 <div class="text-sm text-gray-900 dark:text-gray-100">{{ $client->type === 'pro' ? 'Professionnel' : 'Particulier' }}</div>
                 @if ($client->company_name)
                     <div class="text-sm text-gray-900 dark:text-gray-100">{{ $client->company_name }}</div>
+                @endif
+                @if ($client->siret)
+                    <div class="text-xs text-gray-500 dark:text-gray-400">SIRET : {{ $client->siret }}</div>
                 @endif
             </div>
             <div>

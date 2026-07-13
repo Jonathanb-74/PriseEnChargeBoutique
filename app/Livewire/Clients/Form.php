@@ -3,6 +3,7 @@
 namespace App\Livewire\Clients;
 
 use App\Models\Client;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -31,6 +32,12 @@ class Form extends Component
 
     public string $city = '';
 
+    public ?string $code_client = null;
+
+    public string $siret = '';
+
+    public bool $actif = true;
+
     public function mount(?Client $client = null): void
     {
         if ($client?->exists) {
@@ -46,6 +53,9 @@ class Form extends Component
             $this->address_line2 = $client->address_line2 ?? '';
             $this->postal_code = $client->postal_code ?? '';
             $this->city = $client->city ?? '';
+            $this->code_client = $client->code_client;
+            $this->siret = $client->siret ?? '';
+            $this->actif = $client->actif;
         } else {
             $this->authorize('create', Client::class);
         }
@@ -64,11 +74,21 @@ class Form extends Component
             'address_line2' => ['nullable', 'string', 'max:150'],
             'postal_code' => ['nullable', 'string', 'max:20'],
             'city' => ['nullable', 'string', 'max:100'],
+            'code_client' => [
+                'nullable', 'string', 'max:50',
+                Rule::unique('clients', 'code_client')->ignore($this->client?->id),
+            ],
+            'siret' => ['nullable', 'string', 'max:20'],
+            'actif' => ['boolean'],
         ];
     }
 
     public function save()
     {
+        if ($this->code_client === '') {
+            $this->code_client = null;
+        }
+
         $data = $this->validate();
 
         if ($this->client) {

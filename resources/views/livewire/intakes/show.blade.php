@@ -6,7 +6,10 @@
             </span>
             @can('downloadPdf', $intake)
                 <a href="{{ route('intakes.pdf', $intake) }}" class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-widest">
-                    Fiche PDF
+                    Fiche PDF (interne)
+                </a>
+                <a href="{{ route('intakes.pdf.client', $intake) }}" class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-widest">
+                    Fiche client (PDF)
                 </a>
             @endcan
         </x-slot>
@@ -55,18 +58,64 @@
                     @if ($intake->machine->photos->isNotEmpty())
                         <div class="grid grid-cols-4 gap-2 mt-3">
                             @foreach ($intake->machine->photos as $photo)
-                                <a href="{{ $photo->viewUrl() }}" target="_blank">
-                                    <img src="{{ $photo->viewUrl() }}" class="h-16 w-full object-cover rounded-md">
-                                </a>
+                                <div class="relative group" wire:key="machine-photo-{{ $photo->id }}">
+                                    <a href="{{ $photo->viewUrl() }}" target="_blank">
+                                        <img src="{{ $photo->viewUrl() }}" class="h-16 w-full object-cover rounded-md">
+                                    </a>
+                                    @can('update', $intake->machine)
+                                        <button type="button" wire:click="deletePhoto({{ $photo->id }})" wire:confirm="Supprimer cette photo ?"
+                                            class="absolute top-1 right-1 bg-red-600 text-white rounded-full h-5 w-5 text-xs leading-5 text-center">
+                                            ×
+                                        </button>
+                                    @endcan
+                                </div>
                             @endforeach
                         </div>
                     @endif
+
+                    @can('update', $intake->machine)
+                        <div class="mt-3">
+                            <x-input-label value="Ajouter une photo de l'étiquette / numéro de série" class="text-xs" />
+                            <input type="file" wire:model="newPhotos" multiple accept="image/png,image/jpeg,image/webp"
+                                class="block w-full text-sm text-gray-600 dark:text-gray-300 mt-1">
+                            <div wire:loading wire:target="newPhotos" class="text-xs text-gray-500 dark:text-gray-400 mt-1">Envoi…</div>
+                            <x-input-error :messages="$errors->get('newPhotos.*')" class="mt-2" />
+                        </div>
+                    @endcan
                 </div>
 
                 {{-- PANNE SIGNALEE --}}
                 <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-4 sm:p-6">
                     <div class="text-xs uppercase text-gray-500 dark:text-gray-400">Panne signalée</div>
                     <p class="text-sm text-gray-900 dark:text-gray-100">{{ $intake->reported_issue ?: 'Non précisé.' }}</p>
+
+                    @if ($intake->photos->isNotEmpty())
+                        <div class="grid grid-cols-4 gap-2 mt-3">
+                            @foreach ($intake->photos as $photo)
+                                <div class="relative group" wire:key="issue-photo-{{ $photo->id }}">
+                                    <a href="{{ $photo->viewUrl() }}" target="_blank">
+                                        <img src="{{ $photo->viewUrl() }}" class="h-16 w-full object-cover rounded-md">
+                                    </a>
+                                    @can('update', $intake)
+                                        <button type="button" wire:click="deleteIssuePhoto({{ $photo->id }})" wire:confirm="Supprimer cette photo ?"
+                                            class="absolute top-1 right-1 bg-red-600 text-white rounded-full h-5 w-5 text-xs leading-5 text-center">
+                                            ×
+                                        </button>
+                                    @endcan
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    @can('update', $intake)
+                        <div class="mt-3">
+                            <x-input-label value="Ajouter une photo du problème / dommage constaté" class="text-xs" />
+                            <input type="file" wire:model="newIssuePhotos" multiple accept="image/png,image/jpeg,image/webp"
+                                class="block w-full text-sm text-gray-600 dark:text-gray-300 mt-1">
+                            <div wire:loading wire:target="newIssuePhotos" class="text-xs text-gray-500 dark:text-gray-400 mt-1">Envoi…</div>
+                            <x-input-error :messages="$errors->get('newIssuePhotos.*')" class="mt-2" />
+                        </div>
+                    @endcan
                 </div>
 
                 {{-- NOTES --}}
@@ -122,8 +171,18 @@
                             </div>
 
                             <div>
-                                <x-input-label for="notif_cc" value="CC (emails séparés par une virgule)" />
+                                <x-input-label for="notif_cc" value="Destinataires en copie (emails séparés par une virgule)" />
                                 <x-text-input id="notif_cc" type="text" class="mt-1 block w-full" wire:model="notif_cc" />
+                                <div class="mt-2 flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                                    <label class="inline-flex items-center gap-1.5">
+                                        <input type="radio" wire:model="notif_cc_mode" value="bcc" class="text-[rgb(var(--color-accent))] focus:ring-[rgb(var(--color-accent))]">
+                                        CCI (invisible pour le client)
+                                    </label>
+                                    <label class="inline-flex items-center gap-1.5">
+                                        <input type="radio" wire:model="notif_cc_mode" value="cc" class="text-[rgb(var(--color-accent))] focus:ring-[rgb(var(--color-accent))]">
+                                        CC (visible pour le client)
+                                    </label>
+                                </div>
                             </div>
 
                             <div class="flex justify-end">
@@ -136,10 +195,22 @@
                                 <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Historique des notifications</h4>
                                 <div class="space-y-2">
                                     @foreach ($intake->notifications as $notif)
+                                        @php
+                                            $notifStyle = match ($notif->status) {
+                                                'sent' => 'text-green-600 dark:text-green-400',
+                                                'queued' => 'text-amber-600 dark:text-amber-400',
+                                                default => 'text-red-600 dark:text-red-400',
+                                            };
+                                            $notifLabel = match ($notif->status) {
+                                                'sent' => 'Envoyé',
+                                                'queued' => 'En attente',
+                                                default => 'Échec',
+                                            };
+                                        @endphp
                                         <div class="text-sm flex items-center justify-between">
                                             <span class="text-gray-900 dark:text-gray-100">{{ $notif->subject }}</span>
-                                            <span class="text-xs {{ $notif->status === 'sent' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
-                                                {{ $notif->status === 'sent' ? 'Envoyé' : 'Échec' }} · {{ $notif->created_at->format('d/m/Y H:i') }}
+                                            <span class="text-xs {{ $notifStyle }}">
+                                                {{ $notifLabel }} · {{ $notif->created_at->format('d/m/Y H:i') }}
                                             </span>
                                         </div>
                                     @endforeach

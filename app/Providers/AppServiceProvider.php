@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\ClientNotification;
 use App\Models\Setting;
+use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -26,6 +28,19 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Event::listen(SocialiteWasCalled::class, AzureExtendSocialite::class);
+
+        Setting::applyMailConfig();
+
+        Event::listen(MessageSent::class, function (MessageSent $event) {
+            $notificationId = $event->data['notificationId'] ?? null;
+
+            if ($notificationId) {
+                ClientNotification::whereKey($notificationId)->update([
+                    'status' => 'sent',
+                    'sent_at' => now(),
+                ]);
+            }
+        });
 
         View::composer(['layouts.app', 'layouts.guest'], function (ViewContract $view) {
             $view->with([

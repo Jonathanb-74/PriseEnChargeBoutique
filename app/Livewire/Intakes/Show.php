@@ -7,19 +7,25 @@ use App\Models\ClientNotification;
 use App\Models\EmailTemplate;
 use App\Models\Intake;
 use App\Models\IntakeNote;
+use App\Models\IntakePhoto;
 use App\Models\IntakeStatusHistory;
+use App\Models\MachinePhoto;
 use App\Models\Setting;
 use App\Models\Status;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 #[Layout('layouts.app')]
 class Show extends Component
 {
+    use WithFileUploads;
+
     public Intake $intake;
 
     public string $newNote = '';
@@ -38,11 +44,19 @@ class Show extends Component
 
     public string $notif_cc = '';
 
+    public string $notif_cc_mode = 'bcc';
+
     public ?string $clientSignatureData = null;
 
     public string $clientSignatureName = '';
 
     public ?string $staffSignatureData = null;
+
+    /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
+    public array $newPhotos = [];
+
+    /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
+    public array $newIssuePhotos = [];
 
     public function mount(Intake $intake): void
     {
@@ -59,7 +73,7 @@ class Show extends Component
         $this->intake = $this->intake->fresh([
             'client', 'machine.photos', 'status', 'technician', 'createdBy',
             'notes.user', 'statusHistories.status', 'statusHistories.changedBy',
-            'notifications.sentBy',
+            'notifications.sentBy', 'photos',
         ]);
     }
 
@@ -125,6 +139,86 @@ class Show extends Component
         $this->authorize('viewMachinePassword', $this->intake);
 
         $this->showMachinePassword = ! $this->showMachinePassword;
+    }
+
+    /**
+     * A native <input multiple> replaces its whole selection every time the user picks files
+     * again, so each batch is validated and stored immediately rather than queued for a
+     * separate "save" step (this page has no such step).
+     */
+    public function updatedNewPhotos(): void
+    {
+        $this->authorize('update', $this->intake->machine);
+
+        $this->validateOnly('newPhotos.*', [
+            'newPhotos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        foreach ($this->newPhotos as $photo) {
+            $path = $photo->store('machines/'.$this->intake->machine_id, 'local');
+
+            MachinePhoto::create([
+                'machine_id' => $this->intake->machine_id,
+                'disk' => 'local',
+                'path' => $path,
+                'original_name' => $photo->getClientOriginalName(),
+                'mime_type' => $photo->getMimeType(),
+                'size' => $photo->getSize(),
+            ]);
+        }
+
+        $this->newPhotos = [];
+        $this->loadIntake();
+    }
+
+    public function deletePhoto(MachinePhoto $photo): void
+    {
+        $this->authorize('update', $this->intake->machine);
+
+        Storage::disk($photo->disk)->delete($photo->path);
+        $photo->delete();
+
+        $this->loadIntake();
+    }
+
+    /**
+     * Photos of the reported issue itself (e.g. physical damage), tied to this intake rather
+     * than the machine — unlike updatedNewPhotos() above, which stores permanent machine
+     * identification photos (label, serial number).
+     */
+    public function updatedNewIssuePhotos(): void
+    {
+        $this->authorize('update', $this->intake);
+
+        $this->validateOnly('newIssuePhotos.*', [
+            'newIssuePhotos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        foreach ($this->newIssuePhotos as $photo) {
+            $path = $photo->store('intakes/'.$this->intake->id, 'local');
+
+            IntakePhoto::create([
+                'intake_id' => $this->intake->id,
+                'disk' => 'local',
+                'path' => $path,
+                'original_name' => $photo->getClientOriginalName(),
+                'mime_type' => $photo->getMimeType(),
+                'size' => $photo->getSize(),
+            ]);
+        }
+
+        $this->newIssuePhotos = [];
+        $this->loadIntake();
+    }
+
+    public function deleteIssuePhoto(IntakePhoto $photo): void
+    {
+        $this->authorize('update', $this->intake);
+
+        Storage::disk($photo->disk)->delete($photo->path);
+        $photo->delete();
+
+        $this->loadIntake();
     }
 
     public function saveClientSignature(): void
@@ -197,6 +291,7 @@ class Show extends Component
             'client' => $this->intake->client->full_name,
             'machine' => "{$this->intake->machine->brand} {$this->intake->machine->model}",
             'statut' => $this->intake->status->label,
+            'panne' => $this->intake->reported_issue ?: 'Non précisé.',
         ]);
 
         $this->notif_subject = $subject;
@@ -211,6 +306,7 @@ class Show extends Component
             'notif_subject' => ['required', 'string', 'max:255'],
             'notif_body' => ['required', 'string', 'max:5000'],
             'notif_cc' => ['nullable', 'string'],
+            'notif_cc_mode' => ['required', 'in:cc,bcc'],
         ]);
 
         if (! $this->intake->client->email) {
@@ -219,35 +315,35 @@ class Show extends Component
             return;
         }
 
-        $cc = array_filter(array_map('trim', explode(',', $this->notif_cc)));
-        $cc[] = Auth::user()->email;
-        $cc = array_values(array_unique(array_filter($cc)));
+        $extraRecipients = array_values(array_unique(array_filter(array_map('trim', explode(',', $this->notif_cc)))));
+
+        $cc = $this->notif_cc_mode === 'cc' ? $extraRecipients : [];
+        $bcc = $this->notif_cc_mode === 'bcc'
+            ? array_values(array_unique(array_merge([Auth::user()->email], $extraRecipients)))
+            : [Auth::user()->email];
+
+        $template = $this->selectedTemplateId ? EmailTemplate::find($this->selectedTemplateId) : null;
+
+        $notification = ClientNotification::create([
+            'intake_id' => $this->intake->id,
+            'template_key' => $template?->key,
+            'subject' => $this->notif_subject,
+            'recipient_email' => $this->intake->client->email,
+            'cc' => $cc,
+            'bcc' => $bcc,
+            'sent_by' => Auth::id(),
+            'status' => 'queued',
+        ]);
+
+        $mailable = new ClientNotificationMail($this->notif_subject, $this->notif_body, $template?->attach_pdf ? $this->intake : null, $template?->email_title);
+        $mailable->notificationId = $notification->id;
 
         try {
-            Mail::to($this->intake->client->email)->cc($cc)->send(
-                new ClientNotificationMail($this->notif_subject, $this->notif_body)
-            );
+            Mail::to($this->intake->client->email)->cc($cc)->bcc($bcc)->send($mailable);
 
-            ClientNotification::create([
-                'intake_id' => $this->intake->id,
-                'template_key' => $this->selectedTemplateId ? EmailTemplate::find($this->selectedTemplateId)?->key : null,
-                'subject' => $this->notif_subject,
-                'recipient_email' => $this->intake->client->email,
-                'cc' => $cc,
-                'sent_by' => Auth::id(),
-                'sent_at' => now(),
-                'status' => 'sent',
-            ]);
-
-            session()->flash('status', 'Notification envoyée au client.');
+            session()->flash('status', "Notification mise en file d'attente pour envoi au client.");
         } catch (\Throwable $e) {
-            ClientNotification::create([
-                'intake_id' => $this->intake->id,
-                'template_key' => $this->selectedTemplateId ? EmailTemplate::find($this->selectedTemplateId)?->key : null,
-                'subject' => $this->notif_subject,
-                'recipient_email' => $this->intake->client->email,
-                'cc' => $cc,
-                'sent_by' => Auth::id(),
+            $notification->update([
                 'status' => 'failed',
                 'error_message' => $e->getMessage(),
             ]);

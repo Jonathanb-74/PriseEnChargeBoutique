@@ -16,8 +16,6 @@ class Index extends Component
 
     public string $color = '#3b82f6';
 
-    public int $sort_order = 0;
-
     public bool $is_default = false;
 
     public bool $is_final = false;
@@ -32,7 +30,6 @@ class Index extends Component
         return [
             'label' => ['required', 'string', 'max:100'],
             'color' => ['required', 'string', 'max:20'],
-            'sort_order' => ['required', 'integer', 'min:0'],
             'is_default' => ['boolean'],
             'is_final' => ['boolean'],
         ];
@@ -45,14 +42,13 @@ class Index extends Component
         $this->editingId = $status->id;
         $this->label = $status->label;
         $this->color = $status->color;
-        $this->sort_order = $status->sort_order;
         $this->is_default = $status->is_default;
         $this->is_final = $status->is_final;
     }
 
     public function cancelEdit(): void
     {
-        $this->reset(['editingId', 'label', 'color', 'sort_order', 'is_default', 'is_final']);
+        $this->reset(['editingId', 'label', 'color', 'is_default', 'is_final']);
     }
 
     public function save(): void
@@ -71,10 +67,36 @@ class Index extends Component
         } else {
             $this->authorize('create', Status::class);
             $data['slug'] = Str::slug($this->label, '_');
+            $data['sort_order'] = (Status::max('sort_order') ?? -1) + 1;
             Status::create($data);
         }
 
         $this->cancelEdit();
+    }
+
+    public function moveStatus(int $draggedId, int $targetId): void
+    {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
+        if ($draggedId === $targetId) {
+            return;
+        }
+
+        $ids = Status::query()->orderBy('sort_order')->pluck('id')->all();
+
+        $from = array_search($draggedId, $ids, true);
+        $to = array_search($targetId, $ids, true);
+
+        if ($from === false || $to === false) {
+            return;
+        }
+
+        array_splice($ids, $from, 1);
+        array_splice($ids, $to, 0, [$draggedId]);
+
+        foreach ($ids as $index => $id) {
+            Status::whereKey($id)->update(['sort_order' => $index]);
+        }
     }
 
     public function delete(Status $status): void

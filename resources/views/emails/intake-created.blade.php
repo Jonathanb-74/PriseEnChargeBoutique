@@ -20,6 +20,5 @@ Nous vous confirmons la prise en charge de votre matériel :
 
 Nous reviendrons vers vous dès qu'il y aura du nouveau concernant votre matériel.
 
-Cordialement,<br>
-{{ config('app.name') }}
+{!! nl2br(e(\App\Models\Setting::emailSignature())) !!}
 </x-mail::message>

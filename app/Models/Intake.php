@@ -151,6 +151,18 @@ class Intake extends Model
     }
 
     /**
+     * Photos of the reported issue itself (e.g. physical damage), specific to this intake —
+     * as opposed to Machine::photos(), which are permanent identification photos of the
+     * machine (label, serial number) that persist across every intake for that machine.
+     *
+     * @return HasMany<IntakePhoto, $this>
+     */
+    public function photos(): HasMany
+    {
+        return $this->hasMany(IntakePhoto::class)->latest();
+    }
+
+    /**
      * @param  Builder<Intake>  $query
      * @return Builder<Intake>
      */

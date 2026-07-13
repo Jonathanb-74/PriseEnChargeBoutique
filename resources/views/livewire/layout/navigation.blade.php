@@ -41,7 +41,7 @@ new class extends Component
                     </x-nav-link>
                     @if (auth()->user()->isAdmin())
                         @php
-                            $adminRouteIsActive = request()->routeIs(['statuses.*', 'email-templates.*', 'settings.*', 'users.*']);
+                            $adminRouteIsActive = request()->routeIs(['statuses.*', 'email-templates.*', 'settings.*', 'queue.*', 'users.*']);
                         @endphp
                         <div class="flex items-center">
                             <x-dropdown align="left" width="48">
@@ -63,6 +63,9 @@ new class extends Component
                                     </x-dropdown-link>
                                     <x-dropdown-link :href="route('settings.index')" wire:navigate>
                                         Paramètres
+                                    </x-dropdown-link>
+                                    <x-dropdown-link :href="route('queue.index')" wire:navigate>
+                                        File d'attente
                                     </x-dropdown-link>
                                     <x-dropdown-link :href="route('users.index')" wire:navigate>
                                         Utilisateurs
@@ -144,6 +147,9 @@ new class extends Component
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('settings.index')" :active="request()->routeIs('settings.*')" wire:navigate>
                     Paramètres
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('queue.index')" :active="request()->routeIs('queue.*')" wire:navigate>
+                    File d'attente
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')" wire:navigate>
                     Utilisateurs
