@@ -77,9 +77,15 @@ class Show extends Component
         ]);
     }
 
+    protected function guardNotFinal(): void
+    {
+        abort_if($this->intake->status->is_final, 403, "Cette prise en charge est clôturée. Rouvrez-la (changez son statut) avant de la modifier.");
+    }
+
     public function addNote(): void
     {
         $this->authorize('update', $this->intake);
+        $this->guardNotFinal();
 
         $this->validate(['newNote' => ['required', 'string', 'max:2000']]);
 
@@ -118,6 +124,7 @@ class Show extends Component
     public function assignTechnician(): void
     {
         $this->authorize('update', $this->intake);
+        $this->guardNotFinal();
 
         $this->validate([
             'technicianId' => [
@@ -149,6 +156,7 @@ class Show extends Component
     public function updatedNewPhotos(): void
     {
         $this->authorize('update', $this->intake->machine);
+        $this->guardNotFinal();
 
         $this->validateOnly('newPhotos.*', [
             'newPhotos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
@@ -174,6 +182,7 @@ class Show extends Component
     public function deletePhoto(MachinePhoto $photo): void
     {
         $this->authorize('update', $this->intake->machine);
+        $this->guardNotFinal();
 
         Storage::disk($photo->disk)->delete($photo->path);
         $photo->delete();
@@ -189,6 +198,7 @@ class Show extends Component
     public function updatedNewIssuePhotos(): void
     {
         $this->authorize('update', $this->intake);
+        $this->guardNotFinal();
 
         $this->validateOnly('newIssuePhotos.*', [
             'newIssuePhotos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
@@ -214,6 +224,7 @@ class Show extends Component
     public function deleteIssuePhoto(IntakePhoto $photo): void
     {
         $this->authorize('update', $this->intake);
+        $this->guardNotFinal();
 
         Storage::disk($photo->disk)->delete($photo->path);
         $photo->delete();
@@ -224,6 +235,7 @@ class Show extends Component
     public function saveClientSignature(): void
     {
         $this->authorize('update', $this->intake);
+        $this->guardNotFinal();
 
         $this->validate([
             'clientSignatureName' => ['required', 'string', 'max:150'],
@@ -252,6 +264,7 @@ class Show extends Component
     public function saveStaffSignature(): void
     {
         $this->authorize('update', $this->intake);
+        $this->guardNotFinal();
 
         $this->validate(['staffSignatureData' => ['required', 'string']]);
 
@@ -301,6 +314,7 @@ class Show extends Component
     public function sendNotification(): void
     {
         $this->authorize('sendClientNotification', $this->intake);
+        $this->guardNotFinal();
 
         $this->validate([
             'notif_subject' => ['required', 'string', 'max:255'],

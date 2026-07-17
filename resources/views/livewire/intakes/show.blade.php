@@ -22,6 +22,11 @@
         @if (session('error'))
             <div class="rounded-md bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-300">{{ session('error') }}</div>
         @endif
+        @if ($intake->status->is_final)
+            <div class="rounded-md bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                Cette prise en charge est clôturée ({{ $intake->status->label }}) et n'est plus modifiable. Changez le statut ci-contre pour la rouvrir.
+            </div>
+        @endif
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-2 space-y-6">
@@ -62,26 +67,30 @@
                                     <a href="{{ $photo->viewUrl() }}" target="_blank">
                                         <img src="{{ $photo->viewUrl() }}" class="h-16 w-full object-cover rounded-md">
                                     </a>
-                                    @can('update', $intake->machine)
-                                        <button type="button" wire:click="deletePhoto({{ $photo->id }})" wire:confirm="Supprimer cette photo ?"
-                                            class="absolute top-1 right-1 bg-red-600 text-white rounded-full h-5 w-5 text-xs leading-5 text-center">
-                                            ×
-                                        </button>
-                                    @endcan
+                                    @if (! $intake->status->is_final)
+                                        @can('update', $intake->machine)
+                                            <button type="button" wire:click="deletePhoto({{ $photo->id }})" wire:confirm="Supprimer cette photo ?"
+                                                class="absolute top-1 right-1 bg-red-600 text-white rounded-full h-5 w-5 text-xs leading-5 text-center">
+                                                ×
+                                            </button>
+                                        @endcan
+                                    @endif
                                 </div>
                             @endforeach
                         </div>
                     @endif
 
-                    @can('update', $intake->machine)
-                        <div class="mt-3">
-                            <x-input-label value="Ajouter une photo de l'étiquette / numéro de série" class="text-xs" />
-                            <input type="file" wire:model="newPhotos" multiple accept="image/png,image/jpeg,image/webp"
-                                class="block w-full text-sm text-gray-600 dark:text-gray-300 mt-1">
-                            <div wire:loading wire:target="newPhotos" class="text-xs text-gray-500 dark:text-gray-400 mt-1">Envoi…</div>
-                            <x-input-error :messages="$errors->get('newPhotos.*')" class="mt-2" />
-                        </div>
-                    @endcan
+                    @if (! $intake->status->is_final)
+                        @can('update', $intake->machine)
+                            <div class="mt-3">
+                                <x-input-label value="Ajouter une photo de l'étiquette / numéro de série" class="text-xs" />
+                                <input type="file" wire:model="newPhotos" multiple accept="image/png,image/jpeg,image/webp"
+                                    class="block w-full text-sm text-gray-600 dark:text-gray-300 mt-1">
+                                <div wire:loading wire:target="newPhotos" class="text-xs text-gray-500 dark:text-gray-400 mt-1">Envoi…</div>
+                                <x-input-error :messages="$errors->get('newPhotos.*')" class="mt-2" />
+                            </div>
+                        @endcan
+                    @endif
                 </div>
 
                 {{-- PANNE SIGNALEE --}}
@@ -96,38 +105,44 @@
                                     <a href="{{ $photo->viewUrl() }}" target="_blank">
                                         <img src="{{ $photo->viewUrl() }}" class="h-16 w-full object-cover rounded-md">
                                     </a>
-                                    @can('update', $intake)
-                                        <button type="button" wire:click="deleteIssuePhoto({{ $photo->id }})" wire:confirm="Supprimer cette photo ?"
-                                            class="absolute top-1 right-1 bg-red-600 text-white rounded-full h-5 w-5 text-xs leading-5 text-center">
-                                            ×
-                                        </button>
-                                    @endcan
+                                    @if (! $intake->status->is_final)
+                                        @can('update', $intake)
+                                            <button type="button" wire:click="deleteIssuePhoto({{ $photo->id }})" wire:confirm="Supprimer cette photo ?"
+                                                class="absolute top-1 right-1 bg-red-600 text-white rounded-full h-5 w-5 text-xs leading-5 text-center">
+                                                ×
+                                            </button>
+                                        @endcan
+                                    @endif
                                 </div>
                             @endforeach
                         </div>
                     @endif
 
-                    @can('update', $intake)
-                        <div class="mt-3">
-                            <x-input-label value="Ajouter une photo du problème / dommage constaté" class="text-xs" />
-                            <input type="file" wire:model="newIssuePhotos" multiple accept="image/png,image/jpeg,image/webp"
-                                class="block w-full text-sm text-gray-600 dark:text-gray-300 mt-1">
-                            <div wire:loading wire:target="newIssuePhotos" class="text-xs text-gray-500 dark:text-gray-400 mt-1">Envoi…</div>
-                            <x-input-error :messages="$errors->get('newIssuePhotos.*')" class="mt-2" />
-                        </div>
-                    @endcan
+                    @if (! $intake->status->is_final)
+                        @can('update', $intake)
+                            <div class="mt-3">
+                                <x-input-label value="Ajouter une photo du problème / dommage constaté" class="text-xs" />
+                                <input type="file" wire:model="newIssuePhotos" multiple accept="image/png,image/jpeg,image/webp"
+                                    class="block w-full text-sm text-gray-600 dark:text-gray-300 mt-1">
+                                <div wire:loading wire:target="newIssuePhotos" class="text-xs text-gray-500 dark:text-gray-400 mt-1">Envoi…</div>
+                                <x-input-error :messages="$errors->get('newIssuePhotos.*')" class="mt-2" />
+                            </div>
+                        @endcan
+                    @endif
                 </div>
 
                 {{-- NOTES --}}
                 <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-4 sm:p-6">
                     <h3 class="font-medium text-gray-900 dark:text-gray-100 mb-4">Notes de suivi</h3>
 
-                    <form wire:submit="addNote" class="flex flex-col sm:flex-row gap-2 mb-4">
-                        <textarea wire:model="newNote" rows="2" placeholder="Ajouter une note…"
-                            class="flex-1 border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm focus:border-[rgb(var(--color-accent))] focus:ring-[rgb(var(--color-accent))]"></textarea>
-                        <x-primary-button class="self-end">Ajouter</x-primary-button>
-                    </form>
-                    <x-input-error :messages="$errors->get('newNote')" class="mb-2" />
+                    @if (! $intake->status->is_final)
+                        <form wire:submit="addNote" class="flex flex-col sm:flex-row gap-2 mb-4">
+                            <textarea wire:model="newNote" rows="2" placeholder="Ajouter une note…"
+                                class="flex-1 border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm focus:border-[rgb(var(--color-accent))] focus:ring-[rgb(var(--color-accent))]"></textarea>
+                            <x-primary-button class="self-end">Ajouter</x-primary-button>
+                        </form>
+                        <x-input-error :messages="$errors->get('newNote')" class="mb-2" />
+                    @endif
 
                     <div class="space-y-3">
                         @forelse ($intake->notes as $note)
@@ -144,6 +159,11 @@
                 {{-- NOTIFICATION CLIENT --}}
                 @can('sendClientNotification', $intake)
                     <x-collapsible-panel title="Notifier le client" :summary="$intake->notifications->isNotEmpty() ? $intake->notifications->count().' envoi(s)' : null">
+                        @if ($intake->status->is_final)
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                Cette prise en charge est clôturée : rouvrez-la (changez son statut) pour envoyer une nouvelle notification.
+                            </p>
+                        @else
                         <form wire:submit="sendNotification" class="space-y-3">
                             @if ($templates->isNotEmpty())
                                 <div>
@@ -189,6 +209,7 @@
                                 <x-primary-button>Envoyer</x-primary-button>
                             </div>
                         </form>
+                        @endif
 
                         @if ($intake->notifications->isNotEmpty())
                             <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -238,15 +259,19 @@
                 {{-- TECHNICIEN --}}
                 <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-4 sm:p-6">
                     <h3 class="font-medium text-gray-900 dark:text-gray-100 mb-3">Technicien assigné</h3>
-                    <form wire:submit="assignTechnician" class="space-y-3">
-                        <select wire:model="technicianId" class="block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm focus:border-[rgb(var(--color-accent))] focus:ring-[rgb(var(--color-accent))]">
-                            <option value="">Non assigné</option>
-                            @foreach ($technicians as $technician)
-                                <option value="{{ $technician->id }}">{{ $technician->name }}</option>
-                            @endforeach
-                        </select>
-                        <x-primary-button class="w-full justify-center">Assigner</x-primary-button>
-                    </form>
+                    @if ($intake->status->is_final)
+                        <p class="text-sm text-gray-900 dark:text-gray-100">{{ $intake->technician?->name ?? 'Non assigné' }}</p>
+                    @else
+                        <form wire:submit="assignTechnician" class="space-y-3">
+                            <select wire:model="technicianId" class="block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm focus:border-[rgb(var(--color-accent))] focus:ring-[rgb(var(--color-accent))]">
+                                <option value="">Non assigné</option>
+                                @foreach ($technicians as $technician)
+                                    <option value="{{ $technician->id }}">{{ $technician->name }}</option>
+                                @endforeach
+                            </select>
+                            <x-primary-button class="w-full justify-center">Assigner</x-primary-button>
+                        </form>
+                    @endif
                 </div>
 
                 {{-- SIGNATURES --}}
@@ -263,6 +288,10 @@
                                     <img src="{{ route('intakes.signature', [$intake, 'client']) }}" class="h-20 border border-gray-200 dark:border-gray-700 rounded-md bg-white">
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                         Signé par {{ $intake->client_signature_name }} le {{ $intake->client_signed_at->format('d/m/Y H:i') }}
+                                    </p>
+                                @elseif ($intake->status->is_final)
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                                        Non signé — prise en charge clôturée.
                                     </p>
                                 @else
                                     @if ($intakeTermsText)
@@ -291,6 +320,10 @@
                                     <img src="{{ route('intakes.signature', [$intake, 'staff']) }}" class="h-20 border border-gray-200 dark:border-gray-700 rounded-md bg-white">
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                         Signé par {{ $intake->staffSignedBy->name }} le {{ $intake->staff_signed_at->format('d/m/Y H:i') }}
+                                    </p>
+                                @elseif ($intake->status->is_final)
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                                        Non signé — prise en charge clôturée.
                                     </p>
                                 @else
                                     <form wire:submit="saveStaffSignature" class="space-y-3">

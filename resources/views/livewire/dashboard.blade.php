@@ -13,10 +13,10 @@
                 <div class="text-3xl font-semibold text-gray-900 dark:text-gray-100">{{ $openCount }}</div>
                 <div class="text-sm text-gray-500 dark:text-gray-400">Prises en charge ouvertes</div>
             </a>
-            <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-4">
+            <a href="{{ route('intakes.index', ['technicianId' => auth()->id(), 'open' => 1]) }}" wire:navigate class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-4">
                 <div class="text-3xl font-semibold text-gray-900 dark:text-gray-100">{{ $mineCount }}</div>
                 <div class="text-sm text-gray-500 dark:text-gray-400">Assignées à moi</div>
-            </div>
+            </a>
             <a href="{{ route('clients.index') }}" wire:navigate class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-4">
                 <div class="text-3xl font-semibold text-gray-900 dark:text-gray-100">→</div>
                 <div class="text-sm text-gray-500 dark:text-gray-400">Voir les clients</div>
