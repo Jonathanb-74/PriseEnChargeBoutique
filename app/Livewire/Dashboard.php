@@ -16,16 +16,17 @@ class Dashboard extends Component
             ->whereHas('status', fn ($q) => $q->where('is_final', false))
             ->count();
 
-        $recentIntakes = Intake::query()
+        $openIntakes = Intake::query()
             ->with(['client', 'machine', 'status'])
+            ->whereHas('status', fn ($q) => $q->where('is_final', false))
             ->latest()
-            ->limit(8)
+            ->limit(15)
             ->get();
 
         return view('livewire.dashboard', [
             'openCount' => $openCount,
             'mineCount' => $mineCount,
-            'recentIntakes' => $recentIntakes,
+            'openIntakes' => $openIntakes,
         ]);
     }
 }

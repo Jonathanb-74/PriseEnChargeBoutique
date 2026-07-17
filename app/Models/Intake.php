@@ -79,6 +79,24 @@ class Intake extends Model
     }
 
     /**
+     * Copy an existing signature file (e.g. a user's pre-registered signature) into this
+     * intake's own signature files, so it stays intact even if the source is later replaced.
+     */
+    public static function copySignatureFile(string $sourcePath, int|string $intakeId, string $type): ?string
+    {
+        if (! Storage::disk('local')->exists($sourcePath)) {
+            return null;
+        }
+
+        $extension = pathinfo($sourcePath, PATHINFO_EXTENSION) ?: 'png';
+        $path = "signatures/{$intakeId}/{$type}-".Str::random(10).".{$extension}";
+
+        Storage::disk('local')->put($path, Storage::disk('local')->get($sourcePath));
+
+        return $path;
+    }
+
+    /**
      * @return BelongsTo<Client, $this>
      */
     public function client(): BelongsTo

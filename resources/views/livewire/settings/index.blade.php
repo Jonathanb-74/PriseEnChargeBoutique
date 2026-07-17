@@ -88,6 +88,17 @@
             {{-- NOTIFICATIONS --}}
             <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-4 sm:p-6">
                 <h3 class="font-medium text-gray-900 dark:text-gray-100 mb-2">Email de création de prise en charge</h3>
+
+                <label class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 mb-4">
+                    <input type="checkbox" wire:model="sendIntakeCreatedEmail" class="rounded border-gray-300 dark:border-gray-700 mt-0.5">
+                    <span>
+                        Envoyer automatiquement un email au client à la création d'une prise en charge
+                        <span class="block text-xs text-gray-500 dark:text-gray-400">
+                            Réglage par défaut ; il reste possible de changer ce choix pour une prise en charge donnée depuis le formulaire de création.
+                        </span>
+                    </span>
+                </label>
+
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
                     Modèle utilisé pour l'email envoyé au client à la création d'une prise en charge. Les modèles sont gérables dans
                     <a href="{{ route('email-templates.index') }}" wire:navigate class="text-[rgb(var(--color-accent))]">Modèles email</a>.
@@ -175,6 +186,15 @@
                         <x-text-input id="mailFromName" type="text" class="mt-1 block w-full" wire:model="mailFromName" />
                         <x-input-error :messages="$errors->get('mailFromName')" class="mt-2" />
                     </div>
+                </div>
+
+                <div>
+                    <x-input-label for="mailReplyTo" value="Adresse de réponse (Reply-To)" />
+                    <x-text-input id="mailReplyTo" type="email" class="mt-1 block w-full" wire:model="mailReplyTo" placeholder="{{ $mailFromAddress ?: 'contact@exemple.fr' }}" />
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Facultatif. Si renseignée, les réponses des clients partiront vers cette adresse au lieu de l'adresse d'expédition.
+                    </p>
+                    <x-input-error :messages="$errors->get('mailReplyTo')" class="mt-2" />
                 </div>
 
                 <div class="border-t border-gray-200 dark:border-gray-700 pt-4">

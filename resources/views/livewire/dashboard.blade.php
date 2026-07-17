@@ -9,7 +9,7 @@
 
     <div class="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-6">
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <a href="{{ route('intakes.index') }}" wire:navigate class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-4">
+            <a href="{{ route('intakes.index', ['open' => 1]) }}" wire:navigate class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-4">
                 <div class="text-3xl font-semibold text-gray-900 dark:text-gray-100">{{ $openCount }}</div>
                 <div class="text-sm text-gray-500 dark:text-gray-400">Prises en charge ouvertes</div>
             </a>
@@ -24,11 +24,12 @@
         </div>
 
         <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 font-medium text-gray-900 dark:text-gray-100">
-                Dernières prises en charge
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <span class="font-medium text-gray-900 dark:text-gray-100">Prises en charge ouvertes</span>
+                <a href="{{ route('intakes.index', ['open' => 1]) }}" wire:navigate class="text-sm text-[rgb(var(--color-accent))]">Voir tout</a>
             </div>
             <div class="divide-y divide-gray-200 dark:divide-gray-700">
-                @forelse ($recentIntakes as $intake)
+                @forelse ($openIntakes as $intake)
                     <a href="{{ route('intakes.show', $intake) }}" wire:navigate class="flex items-center justify-between p-4 text-sm">
                         <span>
                             <span class="font-medium text-gray-900 dark:text-gray-100">{{ $intake->reference }}</span>
@@ -39,7 +40,7 @@
                         </span>
                     </a>
                 @empty
-                    <p class="p-4 text-sm text-gray-500 dark:text-gray-400">Aucune prise en charge.</p>
+                    <p class="p-4 text-sm text-gray-500 dark:text-gray-400">Aucune prise en charge ouverte.</p>
                 @endforelse
             </div>
         </div>

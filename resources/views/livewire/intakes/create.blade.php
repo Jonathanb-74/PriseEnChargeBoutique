@@ -221,12 +221,20 @@
             {{-- NOTIFICATION --}}
             <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-4 sm:p-6">
                 <h3 class="font-medium text-gray-900 dark:text-gray-100 mb-4">4. Email de confirmation au client</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                    Envoyé automatiquement en copie à vous-même ({{ auth()->user()->email }}). Vous pouvez ajouter un destinataire en copie.
-                </p>
-                <x-input-label for="cc_email" value="CC (facultatif)" />
-                <x-text-input id="cc_email" type="email" class="mt-1 block w-full" wire:model="cc_email" placeholder="collegue@boutique.fr" />
-                <x-input-error :messages="$errors->get('cc_email')" class="mt-2" />
+
+                <label class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 mb-3">
+                    <input type="checkbox" wire:model.live="sendClientEmail" class="rounded border-gray-300 dark:border-gray-700 mt-0.5">
+                    Envoyer un email de confirmation au client
+                </label>
+
+                @if ($sendClientEmail)
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                        Envoyé automatiquement en copie à vous-même ({{ auth()->user()->email }}). Vous pouvez ajouter un destinataire en copie.
+                    </p>
+                    <x-input-label for="cc_email" value="CC (facultatif)" />
+                    <x-text-input id="cc_email" type="email" class="mt-1 block w-full" wire:model="cc_email" placeholder="collegue@boutique.fr" />
+                    <x-input-error :messages="$errors->get('cc_email')" class="mt-2" />
+                @endif
             </div>
 
             {{-- SIGNATURES --}}
@@ -251,7 +259,21 @@
                 <x-signature-pad property="clientSignatureData" label="Signature du client" />
 
                 <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                    <x-signature-pad property="staffSignatureData" label="Signature de l'employé" />
+                    @if (! $overrideStaffSignature && ($staffSignaturePreview = auth()->user()->signaturePreviewDataUri()))
+                        <x-input-label value="Signature de l'employé" />
+                        <div class="mt-1 flex items-center gap-4">
+                            <img src="{{ $staffSignaturePreview }}" class="h-16 border border-gray-200 dark:border-gray-700 rounded-md bg-white p-1">
+                            <span class="text-xs text-gray-500 dark:text-gray-400">Votre signature enregistrée sera appliquée automatiquement.</span>
+                        </div>
+                        <button type="button" wire:click="$set('overrideStaffSignature', true)" class="text-xs text-gray-500 dark:text-gray-400 mt-2 underline">
+                            Signer manuellement pour cette prise en charge
+                        </button>
+                    @else
+                        <x-signature-pad property="staffSignatureData" label="Signature de l'employé" />
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Astuce : enregistrez votre signature dans <a href="{{ route('profile') }}" wire:navigate class="text-[rgb(var(--color-accent))]">votre profil</a> pour ne plus avoir à la saisir à chaque fois.
+                        </p>
+                    @endif
                 </div>
             </div>
 

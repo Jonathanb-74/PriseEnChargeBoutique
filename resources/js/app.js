@@ -2,14 +2,17 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('signaturePad', (property) => ({
         drawing: false,
         empty: true,
+        fullscreen: false,
 
         init() {
             const canvas = this.$refs.canvas;
             const ctx = canvas.getContext('2d');
 
-            const resize = () => {
+            this.resize = () => {
                 const ratio = window.devicePixelRatio || 1;
                 const data = this.empty ? null : canvas.toDataURL('image/png');
+                const previousWidth = canvas.width;
+                const previousHeight = canvas.height;
                 canvas.width = canvas.offsetWidth * ratio;
                 canvas.height = canvas.offsetHeight * ratio;
                 ctx.scale(ratio, ratio);
@@ -19,13 +22,26 @@ document.addEventListener('alpine:init', () => {
 
                 if (data) {
                     const img = new Image();
-                    img.onload = () => ctx.drawImage(img, 0, 0, canvas.offsetWidth, canvas.offsetHeight);
+                    img.onload = () => {
+                        // Fit the previous drawing inside the new canvas size without
+                        // stretching it out of proportion (e.g. when entering fullscreen).
+                        const boxW = canvas.offsetWidth;
+                        const boxH = canvas.offsetHeight;
+                        const oldRatio = previousWidth && previousHeight ? previousWidth / previousHeight : boxW / boxH;
+                        let w = boxW;
+                        let h = w / oldRatio;
+                        if (h > boxH) {
+                            h = boxH;
+                            w = h * oldRatio;
+                        }
+                        ctx.drawImage(img, (boxW - w) / 2, (boxH - h) / 2, w, h);
+                    };
                     img.src = data;
                 }
             };
 
-            resize();
-            window.addEventListener('resize', resize);
+            this.resize();
+            window.addEventListener('resize', this.resize);
 
             const pos = (e) => {
                 const rect = canvas.getBoundingClientRect();
@@ -62,6 +78,12 @@ document.addEventListener('alpine:init', () => {
             canvas.addEventListener('touchstart', start, { passive: false });
             canvas.addEventListener('touchmove', move, { passive: false });
             canvas.addEventListener('touchend', end);
+        },
+
+        toggleFullscreen() {
+            this.fullscreen = !this.fullscreen;
+            document.body.style.overflow = this.fullscreen ? 'hidden' : '';
+            this.$nextTick(() => this.resize());
         },
 
         clear() {

@@ -22,6 +22,8 @@ class Index extends Component
 
     public string $intakeCreatedTemplateId = '';
 
+    public bool $sendIntakeCreatedEmail = true;
+
     /** @var \Livewire\Features\SupportFileUploads\TemporaryUploadedFile|null */
     public $newLogo = null;
 
@@ -46,6 +48,8 @@ class Index extends Component
 
     public string $mailFromName = '';
 
+    public string $mailReplyTo = '';
+
     public string $testEmailAddress = '';
 
     public ?string $testStatus = null;
@@ -59,6 +63,7 @@ class Index extends Component
         $this->intakeTermsText = Setting::get(Setting::INTAKE_TERMS_TEXT, '');
         $this->accentColor = Setting::accentColor();
         $this->intakeCreatedTemplateId = Setting::get(Setting::INTAKE_CREATED_TEMPLATE_ID, '');
+        $this->sendIntakeCreatedEmail = Setting::sendIntakeCreatedEmailByDefault();
 
         $this->mailMailer = Setting::get(Setting::MAIL_MAILER) ?: config('mail.default');
         $this->mailHost = Setting::get(Setting::MAIL_HOST) ?: (string) config('mail.mailers.smtp.host');
@@ -68,6 +73,7 @@ class Index extends Component
         $this->hasStoredMailPassword = (bool) Setting::get(Setting::MAIL_PASSWORD);
         $this->mailFromAddress = Setting::get(Setting::MAIL_FROM_ADDRESS) ?: (string) config('mail.from.address');
         $this->mailFromName = Setting::get(Setting::MAIL_FROM_NAME) ?: (string) config('mail.from.name');
+        $this->mailReplyTo = Setting::mailReplyTo() ?? '';
     }
 
     public function save(): void
@@ -76,6 +82,7 @@ class Index extends Component
             'intakeTermsText' => ['nullable', 'string', 'max:5000'],
             'accentColor' => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'intakeCreatedTemplateId' => ['nullable', 'exists:email_templates,id'],
+            'sendIntakeCreatedEmail' => ['boolean'],
             'newLogo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,svg,webp', 'max:1024'],
             'newPdfLogo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:1024'],
             'mailMailer' => ['required', 'in:log,smtp'],
@@ -86,11 +93,13 @@ class Index extends Component
             'mailPassword' => ['nullable', 'string', 'max:255'],
             'mailFromAddress' => ['required', 'email', 'max:255'],
             'mailFromName' => ['required', 'string', 'max:255'],
+            'mailReplyTo' => ['nullable', 'email', 'max:255'],
         ]);
 
         Setting::set(Setting::INTAKE_TERMS_TEXT, $this->intakeTermsText);
         Setting::set(Setting::BRAND_ACCENT_COLOR, $this->accentColor);
         Setting::set(Setting::INTAKE_CREATED_TEMPLATE_ID, $this->intakeCreatedTemplateId ?: null);
+        Setting::set(Setting::SEND_INTAKE_CREATED_EMAIL, $this->sendIntakeCreatedEmail ? '1' : '0');
 
         if ($this->newLogo) {
             $this->replaceLogo(Setting::BRAND_LOGO_PATH, $this->newLogo);
@@ -109,6 +118,7 @@ class Index extends Component
         Setting::set(Setting::MAIL_USERNAME, $this->mailUsername ?: null);
         Setting::set(Setting::MAIL_FROM_ADDRESS, $this->mailFromAddress);
         Setting::set(Setting::MAIL_FROM_NAME, $this->mailFromName);
+        Setting::set(Setting::MAIL_REPLY_TO, $this->mailReplyTo ?: null);
 
         if ($this->mailPassword !== '') {
             Setting::setMailPassword($this->mailPassword);

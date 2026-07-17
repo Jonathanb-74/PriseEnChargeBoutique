@@ -12,8 +12,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'email', 'password', 'role', 'azure_id', 'is_assignable'])]
+#[Fillable(['name', 'email', 'password', 'role', 'azure_id', 'is_assignable', 'signature_path', 'signature_type', 'signature_updated_at'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable
 {
@@ -35,6 +36,7 @@ class User extends Authenticatable
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted:array',
             'two_factor_confirmed_at' => 'datetime',
+            'signature_updated_at' => 'datetime',
         ];
     }
 
@@ -56,6 +58,21 @@ class User extends Authenticatable
     public function hasTwoFactorEnabled(): bool
     {
         return $this->two_factor_confirmed_at !== null;
+    }
+
+    /**
+     * The user's pre-registered signature, inlined as a data URI for direct display (the
+     * file lives on the private disk, so it can't be linked to via a public URL).
+     */
+    public function signaturePreviewDataUri(): ?string
+    {
+        if (! $this->signature_path || ! Storage::disk('local')->exists($this->signature_path)) {
+            return null;
+        }
+
+        $extension = pathinfo($this->signature_path, PATHINFO_EXTENSION) ?: 'png';
+
+        return "data:image/{$extension};base64,".base64_encode(Storage::disk('local')->get($this->signature_path));
     }
 
     /**

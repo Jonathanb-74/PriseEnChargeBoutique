@@ -33,6 +33,9 @@ class Index extends Component
     #[Url(history: true)]
     public string $dateTo = '';
 
+    #[Url(as: 'open', history: true)]
+    public bool $openOnly = false;
+
     public function mount(): void
     {
         $this->authorize('viewAny', Intake::class);
@@ -45,7 +48,7 @@ class Index extends Component
 
     public function resetFilters(): void
     {
-        $this->reset(['search', 'statusId', 'clientType', 'technicianId', 'dateFrom', 'dateTo']);
+        $this->reset(['search', 'statusId', 'clientType', 'technicianId', 'dateFrom', 'dateTo', 'openOnly']);
     }
 
     public function render()
@@ -58,6 +61,7 @@ class Index extends Component
             ->when($this->technicianId, fn ($query) => $query->where('technician_id', $this->technicianId))
             ->when($this->dateFrom, fn ($query) => $query->whereDate('created_at', '>=', $this->dateFrom))
             ->when($this->dateTo, fn ($query) => $query->whereDate('created_at', '<=', $this->dateTo))
+            ->when($this->openOnly, fn ($query) => $query->whereHas('status', fn ($q) => $q->where('is_final', false)))
             ->latest()
             ->paginate(15);
 

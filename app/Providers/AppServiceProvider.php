@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\ClientNotification;
 use App\Models\Setting;
+use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\View;
@@ -30,6 +31,14 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(SocialiteWasCalled::class, AzureExtendSocialite::class);
 
         Setting::applyMailConfig();
+
+        Event::listen(MessageSending::class, function (MessageSending $event) {
+            $replyTo = Setting::mailReplyTo();
+
+            if ($replyTo && empty($event->message->getReplyTo())) {
+                $event->message->replyTo($replyTo);
+            }
+        });
 
         Event::listen(MessageSent::class, function (MessageSent $event) {
             $notificationId = $event->data['notificationId'] ?? null;

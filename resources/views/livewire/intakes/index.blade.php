@@ -12,6 +12,11 @@
             <input type="search" wire:model.live.debounce.300ms="search" placeholder="Rechercher (référence, client, n° série, marque…)"
                 class="w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm focus:border-[rgb(var(--color-accent))] focus:ring-[rgb(var(--color-accent))]" />
 
+            <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <input type="checkbox" wire:model.live="openOnly" class="rounded border-gray-300 dark:border-gray-700">
+                Ouvertes uniquement (statut non final)
+            </label>
+
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 <select wire:model.live="statusId" class="border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm text-sm">
                     <option value="">Tous statuts</option>

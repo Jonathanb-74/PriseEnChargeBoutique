@@ -37,7 +37,11 @@ class Setting extends Model
 
     public const MAIL_FROM_NAME = 'mail_from_name';
 
+    public const MAIL_REPLY_TO = 'mail_reply_to';
+
     public const EMAIL_SIGNATURE = 'email_signature';
+
+    public const SEND_INTAKE_CREATED_EMAIL = 'send_intake_created_email';
 
     public const DEFAULT_ACCENT_COLOR = '#4f46e5';
 
@@ -116,6 +120,20 @@ class Setting extends Model
     public static function emailSignature(): string
     {
         return static::get(self::EMAIL_SIGNATURE) ?: "Cordialement,\n".config('app.name');
+    }
+
+    /**
+     * Whether the "prise en charge créée" email should be sent to the client by default.
+     * Enabled unless an admin has explicitly turned it off in Settings.
+     */
+    public static function sendIntakeCreatedEmailByDefault(): bool
+    {
+        return static::get(self::SEND_INTAKE_CREATED_EMAIL, '1') === '1';
+    }
+
+    public static function mailReplyTo(): ?string
+    {
+        return static::get(self::MAIL_REPLY_TO);
     }
 
     public static function mailPassword(): ?string

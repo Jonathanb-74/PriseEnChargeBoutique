@@ -93,9 +93,15 @@ class Create extends Component
 
     public ?string $staffSignatureData = null;
 
+    public bool $overrideStaffSignature = false;
+
+    public bool $sendClientEmail = true;
+
     public function mount(): void
     {
         $this->authorize('create', Intake::class);
+
+        $this->sendClientEmail = Setting::sendIntakeCreatedEmailByDefault();
 
         if ($this->prefilledClientId && $client = Client::find($this->prefilledClientId)) {
             $this->pickClient($client);
@@ -346,12 +352,16 @@ class Create extends Component
 
             if ($this->staffSignatureData) {
                 $path = Intake::storeSignatureImage($this->staffSignatureData, $intake->id, 'staff');
+            } elseif (Auth::user()->signature_path) {
+                $path = Intake::copySignatureFile(Auth::user()->signature_path, $intake->id, 'staff');
+            } else {
+                $path = null;
+            }
 
-                if ($path) {
-                    $signatureUpdates['staff_signature_path'] = $path;
-                    $signatureUpdates['staff_signed_by'] = Auth::id();
-                    $signatureUpdates['staff_signed_at'] = now();
-                }
+            if ($path) {
+                $signatureUpdates['staff_signature_path'] = $path;
+                $signatureUpdates['staff_signed_by'] = Auth::id();
+                $signatureUpdates['staff_signed_at'] = now();
             }
 
             if ($signatureUpdates) {
@@ -361,7 +371,9 @@ class Create extends Component
             return $intake;
         });
 
-        $this->sendCreationEmail($intake);
+        if ($this->sendClientEmail) {
+            $this->sendCreationEmail($intake);
+        }
 
         session()->flash('status', "Prise en charge {$intake->reference} créée.");
 
