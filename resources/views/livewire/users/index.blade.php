@@ -28,11 +28,14 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <x-input-label for="role" value="Rôle" />
-                        <select id="role" wire:model="role" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm focus:border-[rgb(var(--color-accent))] focus:ring-[rgb(var(--color-accent))]">
+                        <select id="role" wire:model="role" @disabled($editingId === auth()->id()) class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-md shadow-sm focus:border-[rgb(var(--color-accent))] focus:ring-[rgb(var(--color-accent))] disabled:opacity-50">
                             @foreach ($roles as $roleOption)
                                 <option value="{{ $roleOption->value }}">{{ $roleOption->label() }}</option>
                             @endforeach
                         </select>
+                        @if ($editingId === auth()->id())
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Vous ne pouvez pas modifier votre propre rôle.</p>
+                        @endif
                         <x-input-error :messages="$errors->get('role')" class="mt-2" />
                     </div>
                     <div class="flex items-end pb-2">

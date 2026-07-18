@@ -30,10 +30,17 @@ new #[Layout('layouts.guest')] class extends Component
     }
 }; ?>
 
-<div x-data="{ showEmailLogin: {{ $errors->any() ? 'true' : 'false' }} }">
+@php
+    $azureEnabled = filled(config('services.azure.client_id'))
+        && filled(config('services.azure.tenant'))
+        && ! in_array(strtolower((string) config('services.azure.tenant')), ['common', 'consumers'], true);
+@endphp
+
+<div x-data="{ showEmailLogin: {{ ($errors->any() || ! $azureEnabled) ? 'true' : 'false' }} }">
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
+    @if ($azureEnabled)
     <a href="{{ route('auth.azure.redirect') }}"
         class="w-full inline-flex justify-center items-center gap-2.5 px-4 py-3 bg-[#2564cf] hover:bg-[#1e50a8] rounded-md text-sm font-semibold text-white shadow-sm transition">
         <svg class="h-4 w-4 shrink-0" viewBox="0 0 21 21" fill="none">
@@ -50,8 +57,9 @@ new #[Layout('layouts.guest')] class extends Component
             Se connecter avec un email et un mot de passe
         </button>
     </div>
+    @endif
 
-    <div x-show="showEmailLogin" x-cloak class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+    <div x-show="showEmailLogin" x-cloak class="@if ($azureEnabled) mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 @endif">
         <form wire:submit="login">
             <!-- Email Address -->
             <div>

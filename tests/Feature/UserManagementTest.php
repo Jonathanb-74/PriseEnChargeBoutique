@@ -77,6 +77,20 @@ test('admin can edit another user\'s name and email', function () {
         ->and($technician->email)->toBe('new-email@example.com');
 });
 
+test('admin cannot change their own role through the edit form', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+
+    $this->actingAs($admin);
+
+    Livewire::test(UsersIndex::class)
+        ->call('edit', $admin)
+        ->set('role', UserRole::Technicien->value)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($admin->fresh()->role)->toBe(UserRole::Admin);
+});
+
 test('admin can edit their own name and email from the users page', function () {
     $admin = User::factory()->create(['role' => UserRole::Admin, 'name' => 'Old Name']);
 

@@ -61,6 +61,12 @@ class Index extends Component
             $user = User::findOrFail($this->editingId);
             $this->authorize('update', $user);
 
+            // Le rôle a sa propre policy (interdit sur soi-même) : ne pas laisser le
+            // formulaire d'édition la contourner.
+            if (! auth()->user()->can('updateRole', $user)) {
+                unset($data['role']);
+            }
+
             $user->update($data);
 
             session()->flash('status', "Utilisateur {$user->name} mis à jour.");

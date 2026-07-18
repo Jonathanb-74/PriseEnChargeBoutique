@@ -331,6 +331,14 @@ class Show extends Component
 
         $extraRecipients = array_values(array_unique(array_filter(array_map('trim', explode(',', $this->notif_cc)))));
 
+        foreach ($extraRecipients as $recipient) {
+            if (! filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+                $this->addError('notif_cc', "\"{$recipient}\" n'est pas une adresse email valide.");
+
+                return;
+            }
+        }
+
         $cc = $this->notif_cc_mode === 'cc' ? $extraRecipients : [];
         $bcc = $this->notif_cc_mode === 'bcc'
             ? array_values(array_unique(array_merge([Auth::user()->email], $extraRecipients)))

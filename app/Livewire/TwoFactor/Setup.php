@@ -52,7 +52,7 @@ class Setup extends Component
         }
 
         $recoveryCodes = collect(range(1, 8))
-            ->map(fn () => Str::random(4).'-'.Str::random(4))
+            ->map(fn () => Str::random(10).'-'.Str::random(10))
             ->all();
 
         Auth::user()->forceFill([

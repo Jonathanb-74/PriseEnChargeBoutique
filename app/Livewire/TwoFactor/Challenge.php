@@ -4,6 +4,7 @@ namespace App\Livewire\TwoFactor;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -35,10 +36,20 @@ class Challenge extends Component
             return;
         }
 
+        $throttleKey = '2fa:'.$user->id.'|'.request()->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+            $this->addError('code', "Trop de tentatives. Veuillez réessayer dans {$seconds} secondes.");
+
+            return;
+        }
+
         if ($this->useRecoveryCode) {
             $codes = $user->two_factor_recovery_codes ?? [];
 
             if (! in_array($this->code, $codes, true)) {
+                RateLimiter::hit($throttleKey);
                 $this->addError('code', 'Code de récupération invalide.');
 
                 return;
@@ -51,11 +62,14 @@ class Challenge extends Component
             $google2fa = new Google2FA();
 
             if (! $google2fa->verifyKey($user->two_factor_secret, $this->code)) {
+                RateLimiter::hit($throttleKey);
                 $this->addError('code', 'Code invalide.');
 
                 return;
             }
         }
+
+        RateLimiter::clear($throttleKey);
 
         $remember = Session::pull('2fa.remember', false);
         Session::forget('2fa.user_id');
