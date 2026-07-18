@@ -7,6 +7,7 @@ use App\Models\Setting;
 use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\View as ViewContract;
@@ -28,6 +29,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Force les URLs générées en https en production, quel que soit le schéma détecté.
+        // Indispensable pour les liens envoyés par email (réinitialisation de mot de passe,
+        // vérification…) : ces notifications partent depuis le worker de la file d'attente
+        // (`queue:work`, lancé par la commande cron), donc sans requête HTTP en cours — Laravel
+        // se rabat alors sur APP_URL, et un simple oubli de mettre "https://" dans .env suffit
+        // à générer des liens en http:// malgré un site servi en https.
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+        }
+
         Event::listen(SocialiteWasCalled::class, AzureExtendSocialite::class);
 
         Setting::applyMailConfig();
