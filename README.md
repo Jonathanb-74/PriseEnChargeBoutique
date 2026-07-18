@@ -30,15 +30,22 @@ Dépôt : [https://github.com/Jonathanb-74/PriseEnChargeBoutique](https://github
 
 ## Prérequis
 
+**Sur le serveur** (hébergement mutualisé Apache typiquement — aucun accès Node.js requis) :
+
 - PHP 8.4 ou supérieur, avec les extensions habituelles de Laravel (mbstring, pdo_mysql, gd ou imagick, zip…)
 - Composer
-- Node.js 18+ et npm
 - MySQL 8+ (ou MariaDB équivalent)
-- Un serveur web (Apache/Nginx) ou simplement `php artisan serve` en développement
+- Un serveur web (Apache/Nginx) — le document root pointe vers `public/`
+
+**Sur votre poste de développement** (uniquement pour modifier le code et recompiler les assets CSS/JS) :
+
+- Node.js 18+ et npm
+
+Les assets compilés (`public/build/`) sont versionnés dans le dépôt Git : le serveur n'a donc jamais besoin de Node.js, il récupère les fichiers déjà construits via `git pull`.
 
 ## Installation
 
-L'installation se fait par un clone du dépôt Git. Tout ce qui est propre à votre instance (`.env`, `vendor/`, `node_modules/`, `public/build/`, fichiers uploadés dans `storage/`) est ignoré par Git : le dossier reste donc « propre » vis-à-vis du dépôt et les mises à jour se font ensuite par un simple `git pull` (voir [Mise à jour](#mise-à-jour)).
+L'installation se fait par un clone du dépôt Git directement sur le serveur. Tout ce qui est propre à votre instance (`.env`, `vendor/`, `node_modules/`, fichiers uploadés dans `storage/`) est ignoré par Git : le dossier reste donc « propre » vis-à-vis du dépôt et les mises à jour se font ensuite par un simple `git pull` (voir [Mise à jour](#mise-à-jour)).
 
 ### 1. Cloner le dépôt
 
@@ -47,66 +54,81 @@ git clone https://github.com/Jonathanb-74/PriseEnChargeBoutique.git
 cd PriseEnChargeBoutique
 ```
 
-### 2. Installer les dépendances
+### 2. Créer la configuration locale
 
-```bash
-composer install
-npm install
-```
-
-### 3. Créer la configuration locale
+**Avant** d'installer les dépendances PHP : Laravel exécute automatiquement du code applicatif à la fin de `composer install` (découverte des packages), qui a besoin d'un `.env` déjà en place pour ne pas tenter de se connecter à une base de données non configurée.
 
 ```bash
 cp .env.example .env
 php artisan key:generate
 ```
 
-Renseignez ensuite dans `.env` au minimum les informations de base de données (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`) et l'URL de l'application (`APP_URL`). Le fichier `.env` n'est pas versionné : il est propre à votre machine et ne sera jamais touché par un `git pull`.
+Renseignez ensuite dans `.env` au minimum les informations de base de données (`DB_CONNECTION=mysql`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`) et l'URL de l'application (`APP_URL`). Le fichier `.env` n'est pas versionné : il est propre à votre serveur et ne sera jamais touché par un `git pull`.
 
-### 4. Initialiser la base et les assets
+### 3. Installer les dépendances PHP
+
+```bash
+composer install --no-dev --optimize-autoloader
+```
+
+Aucune commande npm n'est nécessaire ici : les assets sont déjà compilés dans `public/build/` (voir [Modifier le CSS/JS](#modifier-le-cssjs) si vous devez les changer).
+
+### 4. Initialiser la base
 
 ```bash
 php artisan migrate --seed
 php artisan storage:link
-
-npm run build
 ```
 
 Un compte administrateur de démonstration est créé par le seeder (`admin@boutique.test` / `password`) — **à changer immédiatement en production**, d'autant que la 2FA sera exigée dès la première connexion.
 
-En développement, lancez :
+### En développement local
 
 ```bash
+composer install
+npm install
+php artisan migrate --seed
+
 php artisan serve
 npm run dev
 ```
 
-> **Important pour les mises à jour** : ne modifiez pas directement les fichiers suivis par Git (code, vues, config versionnée). Toute personnalisation locale passe par `.env` ou par l'interface d'administration. Un `git status` doit toujours afficher « working tree clean » — c'est la garantie qu'un `git pull` se fera sans conflit.
+`npm run dev` lance Vite avec rechargement à chaud ; ce n'est utile qu'en développement, jamais sur le serveur de production.
+
+> **Important pour les mises à jour** : ne modifiez pas directement les fichiers suivis par Git (code, vues, config versionnée) sur le serveur. Toute personnalisation locale passe par `.env` ou par l'interface d'administration. Un `git status` doit toujours afficher « working tree clean » — c'est la garantie qu'un `git pull` se fera sans conflit.
+
+## Modifier le CSS/JS
+
+Le CSS (Tailwind) et le JS sont compilés par Vite sur votre poste de développement, puis les fichiers compilés dans `public/build/` sont commités et poussés — c'est ce que `git pull` récupère sur le serveur.
+
+```bash
+npm install          # une seule fois, ou après une mise à jour de package.json
+npm run build         # recompile public/build/
+git add public/build
+git commit -m "Recompile les assets"
+git push
+```
 
 ## Mise à jour
 
-Le dépôt étant la seule source du code et les fichiers locaux étant ignorés par Git, la mise à jour se résume à :
+Le dépôt étant la seule source du code (y compris les assets déjà compilés) et les fichiers locaux étant ignorés par Git, la mise à jour sur le serveur se résume à :
 
 ```bash
 cd PriseEnChargeBoutique
 
 git pull
 
-composer install
-npm install
+composer install --no-dev --optimize-autoloader
 
 php artisan migrate --force
-npm run build
-
 php artisan optimize:clear
 ```
 
 Détail des étapes :
 
-- `git pull` récupère la dernière version du code.
-- `composer install` / `npm install` alignent les dépendances sur les fichiers `composer.lock` / `package-lock.json` fraîchement récupérés.
+- `git pull` récupère la dernière version du code, assets compilés inclus.
+- `composer install` aligne les dépendances PHP sur le fichier `composer.lock` fraîchement récupéré.
 - `php artisan migrate --force` applique les éventuelles nouvelles migrations (`--force` évite la demande de confirmation en production).
-- `npm run build` recompile les assets (CSS/JS).
 - `php artisan optimize:clear` vide les caches (config, routes, vues) pour que la nouvelle version soit bien prise en compte.
 
 Le fichier `.env`, les fichiers uploadés (`storage/`) et la base de données ne sont jamais affectés par cette procédure.

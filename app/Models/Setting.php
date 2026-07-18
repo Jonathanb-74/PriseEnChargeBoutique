@@ -45,9 +45,19 @@ class Setting extends Model
 
     public const DEFAULT_ACCENT_COLOR = '#4f46e5';
 
+    /**
+     * Silently falls back to $default if the database isn't reachable or migrated yet
+     * (e.g. during `composer install`'s package discovery on a fresh clone, before the
+     * .env file is configured — Laravel boots the app, and this model is read from a
+     * view composer on every page, including the login page).
+     */
     public static function get(string $key, ?string $default = null): ?string
     {
-        return static::query()->where('key', $key)->value('value') ?? $default;
+        try {
+            return static::query()->where('key', $key)->value('value') ?? $default;
+        } catch (\Throwable) {
+            return $default;
+        }
     }
 
     public static function set(string $key, ?string $value): void
@@ -154,7 +164,11 @@ class Setting extends Model
      */
     public static function applyMailConfig(): void
     {
-        if (! Schema::hasTable('settings')) {
+        try {
+            if (! Schema::hasTable('settings')) {
+                return;
+            }
+        } catch (\Throwable) {
             return;
         }
 
