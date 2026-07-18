@@ -18,6 +18,7 @@ test('admin can set a custom accent color', function () {
 
     Livewire::test(SettingsIndex::class)
         ->set('accentColor', '#ff0000')
+        ->set('mailMailer', 'log')
         ->call('save')
         ->assertHasNoErrors();
 
@@ -41,6 +42,7 @@ test('admin can upload and remove a custom logo', function () {
 
     Livewire::test(SettingsIndex::class)
         ->set('newLogo', $file)
+        ->set('mailMailer', 'log')
         ->call('save')
         ->assertHasNoErrors();
 
@@ -60,12 +62,12 @@ test('the pdf logo falls back to the app logo, and can be set and removed indepe
     expect(Setting::pdfLogoPath())->toBeNull();
 
     $appLogo = UploadedFile::fake()->image('app-logo.png', 100, 100)->size(20);
-    Livewire::test(SettingsIndex::class)->set('newLogo', $appLogo)->call('save');
+    Livewire::test(SettingsIndex::class)->set('newLogo', $appLogo)->set('mailMailer', 'log')->call('save');
 
     expect(Setting::pdfLogoPath())->not->toBeNull();
 
     $pdfLogo = UploadedFile::fake()->image('pdf-logo.png', 100, 100)->size(20);
-    Livewire::test(SettingsIndex::class)->set('newPdfLogo', $pdfLogo)->call('save')->assertHasNoErrors();
+    Livewire::test(SettingsIndex::class)->set('newPdfLogo', $pdfLogo)->set('mailMailer', 'log')->call('save')->assertHasNoErrors();
 
     $pdfPath = Setting::get(Setting::PDF_LOGO_PATH);
     expect($pdfPath)->not->toBeNull();

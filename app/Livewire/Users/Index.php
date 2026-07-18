@@ -4,16 +4,81 @@ namespace App\Livewire\Users;
 
 use App\Enums\UserRole;
 use App\Models\User;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 #[Layout('layouts.app')]
 class Index extends Component
 {
+    public ?int $editingId = null;
+
+    public string $name = '';
+
+    public string $email = '';
+
+    public string $role = 'technicien';
+
+    public bool $is_assignable = true;
+
     public function mount(): void
     {
         $this->authorize('viewAny', User::class);
+    }
+
+    protected function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->editingId)],
+            'role' => ['required', Rule::enum(UserRole::class)],
+            'is_assignable' => ['boolean'],
+        ];
+    }
+
+    public function edit(User $user): void
+    {
+        $this->authorize('update', $user);
+
+        $this->editingId = $user->id;
+        $this->name = $user->name;
+        $this->email = $user->email;
+        $this->role = $user->role->value;
+        $this->is_assignable = $user->is_assignable;
+    }
+
+    public function cancelEdit(): void
+    {
+        $this->reset(['editingId', 'name', 'email', 'role', 'is_assignable']);
+    }
+
+    public function save(): void
+    {
+        $data = $this->validate();
+
+        if ($this->editingId) {
+            $user = User::findOrFail($this->editingId);
+            $this->authorize('update', $user);
+
+            $user->update($data);
+
+            session()->flash('status', "Utilisateur {$user->name} mis à jour.");
+        } else {
+            $this->authorize('create', User::class);
+
+            $user = User::create([
+                ...$data,
+                'password' => null,
+                'email_verified_at' => null,
+            ]);
+
+            Password::sendResetLink(['email' => $user->email]);
+
+            session()->flash('status', "Utilisateur {$user->name} créé. Un email lui a été envoyé pour définir son mot de passe.");
+        }
+
+        $this->cancelEdit();
     }
 
     public function updateRole(User $user, string $role): void
@@ -35,6 +100,30 @@ class Index extends Component
         session()->flash('status', $user->is_assignable
             ? "{$user->name} peut de nouveau être affecté à des prises en charge."
             : "{$user->name} ne peut plus être affecté à des prises en charge.");
+    }
+
+    public function resetPassword(User $user): void
+    {
+        $this->authorize('resetPassword', $user);
+
+        $user->forceFill(['password' => null])->save();
+
+        Password::sendResetLink(['email' => $user->email]);
+
+        session()->flash('status', "Email de réinitialisation du mot de passe envoyé à {$user->name}.");
+    }
+
+    public function resetTwoFactor(User $user): void
+    {
+        $this->authorize('resetTwoFactor', $user);
+
+        $user->forceFill([
+            'two_factor_secret' => null,
+            'two_factor_recovery_codes' => null,
+            'two_factor_confirmed_at' => null,
+        ])->save();
+
+        session()->flash('status', "2FA réinitialisée pour {$user->name}. Il devra la reconfigurer à sa prochaine connexion.");
     }
 
     public function render()

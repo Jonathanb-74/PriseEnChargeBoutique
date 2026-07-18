@@ -24,6 +24,7 @@ test('admin can update the intake terms text setting', function () {
 
     Livewire::test(SettingsIndex::class)
         ->set('intakeTermsText', 'Tarif minimum : 30€')
+        ->set('mailMailer', 'log')
         ->call('save')
         ->assertHasNoErrors();
 

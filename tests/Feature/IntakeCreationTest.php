@@ -45,11 +45,14 @@ test('creating an intake with a new client and new machine sends a confirmation 
         ->and($intake->reference)->toStartWith('PEC-')
         ->and($intake->statusHistories()->count())->toBe(1);
 
-    Mail::assertSent(IntakeCreated::class, function ($mail) use ($intake) {
+    Mail::assertQueued(IntakeCreated::class, function ($mail) use ($intake) {
         return $mail->intake->is($intake);
     });
 
-    expect(ClientNotification::where('intake_id', $intake->id)->where('status', 'sent')->exists())->toBeTrue();
+    // Mail::fake() intercepts before the mailable is actually sent, so the
+    // MessageSent listener that flips this to 'sent' never fires here — the queued
+    // state is what confirms the notification was correctly recorded and dispatched.
+    expect(ClientNotification::where('intake_id', $intake->id)->where('status', 'queued')->exists())->toBeTrue();
 });
 
 test('a configured template is used instead of the built-in one when creating an intake', function () {
@@ -79,8 +82,8 @@ test('a configured template is used instead of the built-in one when creating an
 
     $intake = Intake::firstOrFail();
 
-    Mail::assertNotSent(IntakeCreated::class);
-    Mail::assertSent(ClientNotificationMail::class, function ($mail) {
+    Mail::assertNotQueued(IntakeCreated::class);
+    Mail::assertQueued(ClientNotificationMail::class, function ($mail) {
         return str_contains($mail->subjectLine, 'Jean Dupont')
             && str_contains($mail->body, 'Dell Latitude 5400');
     });

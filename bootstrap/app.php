@@ -15,6 +15,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // L'app tourne derriere Cloudflare : sans ca, Laravel ignore le X-Forwarded-Proto
         // et pense que la requete est en HTTP, ce qui casse les cookies securises (session, CSRF).
         $middleware->trustProxies(at: '*');
+
+        // Force les comptes locaux (non Microsoft 365) a activer la 2FA avant d'utiliser l'app.
+        $middleware->web(append: [
+            \App\Http\Middleware\EnsureTwoFactorIsEnabled::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

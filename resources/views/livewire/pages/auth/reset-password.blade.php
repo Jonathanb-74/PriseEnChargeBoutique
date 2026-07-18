@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -39,6 +40,14 @@ new #[Layout('layouts.guest')] class extends Component
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        $user = User::where('email', $this->email)->first();
+
+        if ($user && ! $user->usesLocalAuth()) {
+            $this->addError('email', "Cette adresse n'est pas autorisée à réinitialiser un mot de passe. Contactez votre administrateur.");
+
+            return;
+        }
+
         // Here we will attempt to reset the user's password. If it is successful we
         // will update the password on an actual user model and persist it to the
         // database. Otherwise we will parse the error and return the response.
@@ -58,12 +67,15 @@ new #[Layout('layouts.guest')] class extends Component
         // the application's home authenticated view. If there is an error we can
         // redirect them back to where they came from with their error message.
         if ($status != Password::PASSWORD_RESET) {
-            $this->addError('email', __($status));
+            $this->addError('email', match ($status) {
+                Password::INVALID_TOKEN => 'Ce lien de réinitialisation est invalide ou a expiré.',
+                default => "Impossible de réinitialiser le mot de passe. Vérifiez l'adresse saisie.",
+            });
 
             return;
         }
 
-        Session::flash('status', __($status));
+        Session::flash('status', 'Votre mot de passe a été réinitialisé.');
 
         $this->redirectRoute('login', navigate: true);
     }
@@ -73,21 +85,21 @@ new #[Layout('layouts.guest')] class extends Component
     <form wire:submit="resetPassword">
         <!-- Email Address -->
         <div>
-            <x-input-label for="email" :value="__('Email')" />
+            <x-input-label for="email" value="Email" />
             <x-text-input wire:model="email" id="email" class="block mt-1 w-full" type="email" name="email" required autofocus autocomplete="username" />
             <x-input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
 
         <!-- Password -->
         <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+            <x-input-label for="password" value="Mot de passe" />
             <x-text-input wire:model="password" id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="new-password" />
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
 
         <!-- Confirm Password -->
         <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
+            <x-input-label for="password_confirmation" value="Confirmer le mot de passe" />
 
             <x-text-input wire:model="password_confirmation" id="password_confirmation" class="block mt-1 w-full"
                           type="password"
@@ -98,7 +110,7 @@ new #[Layout('layouts.guest')] class extends Component
 
         <div class="flex items-center justify-end mt-4">
             <x-primary-button>
-                {{ __('Reset Password') }}
+                Réinitialiser le mot de passe
             </x-primary-button>
         </div>
     </form>

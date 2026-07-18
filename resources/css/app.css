@@ -7,3 +7,7 @@
         --color-accent: 79 70 229;
     }
 }
+
+[x-cloak] {
+    display: none !important;
+}

@@ -86,7 +86,7 @@ test('a template with attach_pdf sends the client-safe pdf as an attachment', fu
         ->call('sendNotification')
         ->assertHasNoErrors();
 
-    Mail::assertSent(ClientNotificationMail::class, function ($mail) {
+    Mail::assertQueued(ClientNotificationMail::class, function ($mail) {
         return $mail->pdfIntake !== null && count($mail->attachments()) === 1;
     });
 });
@@ -102,7 +102,7 @@ test('a template without attach_pdf does not attach anything', function () {
         ->call('sendNotification')
         ->assertHasNoErrors();
 
-    Mail::assertSent(ClientNotificationMail::class, function ($mail) {
+    Mail::assertQueued(ClientNotificationMail::class, function ($mail) {
         return $mail->pdfIntake === null && count($mail->attachments()) === 0;
     });
 });
