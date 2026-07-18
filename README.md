@@ -139,7 +139,8 @@ Si `git pull` refuse de s'exécuter à cause de modifications locales, c'est qu'
 
 - **Email sortant (SMTP)** : Paramètres → Email sortant, directement depuis l'interface (aucune variable `.env` à modifier). Par défaut, les emails partent en mode journal (`log`), sans envoi réel.
 - **Connexion Microsoft 365** (facultatif) : renseigner `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` et `AZURE_TENANT` dans `.env` pour activer le bouton de connexion SSO.
-- **Traitement des emails en file d'attente** : les emails ne partent pas de façon synchrone. Une tâche planifiée doit exécuter `php artisan schedule:run` chaque minute (cron classique en production, Planificateur de tâches Windows en local) — voir la documentation intégrée sur la page "File d'attente" de l'administration pour le détail des commandes selon l'environnement.
+- **Traitement des emails en file d'attente** : les emails ne partent pas de façon synchrone. Une tâche planifiée doit exécuter `php artisan schedule:run` chaque minute — voir la documentation intégrée sur la page "File d'attente" de l'administration pour le détail selon l'environnement (cron classique, Planificateur de tâches Windows en local, ou URL publique ci-dessous).
+  - Sur un hébergement mutualisé sans accès crontab en SSH (ex. **Infomaniak**) : renseignez `CRON_SECRET` dans `.env` (valeur aléatoire, voir le commentaire dans `.env.example`), puis configurez l'hébergeur pour appeler `https://votre-domaine/cron/VOTRE_SECRET` chaque minute (fonctionnalité généralement nommée « tâche planifiée » ou « CRON » basée sur une URL dans le panneau d'administration). Cette route exécute `schedule:run` et répond `404` si le secret est absent ou incorrect.
 
 ## Tests
 

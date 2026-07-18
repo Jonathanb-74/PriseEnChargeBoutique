@@ -45,9 +45,33 @@
                 </div>
 
                 <div>
-                    <h4 class="font-medium text-gray-900 dark:text-gray-100 mb-1">Mise en place — serveur de production (Linux/cPanel)</h4>
+                    <h4 class="font-medium text-gray-900 dark:text-gray-100 mb-1">Mise en place — serveur de production avec accès crontab (Linux/cPanel)</h4>
                     <p>Une seule ligne de cron, dans le gestionnaire de cron du serveur :</p>
                     <pre class="mt-1 bg-gray-50 dark:bg-gray-900 rounded-md p-2 overflow-x-auto text-xs">* * * * * cd /chemin/vers/l'appli && php artisan schedule:run >> /dev/null 2>&1</pre>
+                </div>
+
+                <div>
+                    <h4 class="font-medium text-gray-900 dark:text-gray-100 mb-1">Mise en place — hébergement sans crontab SSH (ex. Infomaniak mutualisé)</h4>
+                    <p class="mb-1">
+                        Certains hébergeurs mutualisés (Infomaniak, notamment) n'autorisent pas de crontab classique en SSH et proposent
+                        à la place de « pinger » une URL publique à intervalle régulier. L'application expose exactement ça :
+                    </p>
+                    <ol class="list-decimal list-inside space-y-1">
+                        <li>
+                            Générez un secret aléatoire (par exemple avec <code>php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"</code>)
+                            et renseignez-le dans <code>.env</code> sous la clé <code>CRON_SECRET</code>.
+                        </li>
+                        <li>
+                            Dans le panneau d'administration de l'hébergeur (ex. Infomaniak → « Tâches planifiées » / « CRON »), configurez
+                            l'appel de l'URL suivante toutes les minutes :
+                            <pre class="mt-1 bg-gray-50 dark:bg-gray-900 rounded-md p-2 overflow-x-auto text-xs">{{ url('/cron/VOTRE_SECRET') }}</pre>
+                        </li>
+                    </ol>
+                    <p class="mt-1">
+                        Chaque appel exécute <code>schedule:run</code>, exactement comme le ferait un vrai cron — aucune autre différence
+                        avec la mise en place classique. L'URL répond <code>404</code> (comme une page inexistante) si le secret est absent
+                        ou incorrect, pour ne pas révéler son existence à qui ne le connaît pas.
+                    </p>
                 </div>
 
                 <div>

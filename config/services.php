@@ -42,4 +42,6 @@ return [
         'tenant' => env('AZURE_TENANT'),
     ],
 
+    'cron_secret' => env('CRON_SECRET'),
+
 ];
