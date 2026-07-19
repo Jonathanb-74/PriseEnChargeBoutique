@@ -45,7 +45,11 @@ return [
             'port' => env('MAIL_PORT', 2525),
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
-            'timeout' => null,
+            // Sans timeout explicite, une connexion SMTP qui ne répond pas (mauvais port,
+            // pare-feu sortant de l'hébergeur…) peut rester bloquée ~60s (valeur par défaut
+            // de PHP), ce qui dépasse souvent la limite d'exécution PHP d'un hébergement
+            // mutualisé et tue le processus brutalement — au lieu d'échouer proprement.
+            'timeout' => (int) env('MAIL_TIMEOUT', 10),
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 

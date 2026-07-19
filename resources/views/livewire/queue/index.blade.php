@@ -88,9 +88,18 @@
 
         {{-- TÂCHES EN ATTENTE --}}
         <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-4 sm:p-6">
-            <h3 class="font-medium text-gray-900 dark:text-gray-100 mb-1">Tâches en attente ({{ $pendingJobs->count() }})</h3>
+            <div class="flex items-center justify-between mb-1">
+                <h3 class="font-medium text-gray-900 dark:text-gray-100">Tâches en attente ({{ $pendingJobs->count() }})</h3>
+                @if ($pendingJobs->isNotEmpty())
+                    <button type="button" wire:click="processNow" wire:loading.attr="disabled" class="text-xs text-[rgb(var(--color-accent))] disabled:opacity-50">
+                        <span wire:loading.remove wire:target="processNow">Traiter maintenant</span>
+                        <span wire:loading wire:target="processNow">Traitement en cours…</span>
+                    </button>
+                @endif
+            </div>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                Ces tâches seront traitées dès qu'un worker (<code>php artisan queue:work</code>) tourne.
+                Ces tâches sont normalement traitées automatiquement (cron / URL planifiée). Le bouton ci-dessus permet de forcer
+                le traitement immédiatement, sans attendre — utile en dépannage.
             </p>
 
             <div class="overflow-x-auto">

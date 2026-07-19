@@ -42,6 +42,32 @@ class Index extends Component
         session()->flash('status', 'Toutes les tâches échouées ont été remises en file d\'attente.');
     }
 
+    /**
+     * Traite la file immédiatement, sans passer par le planificateur — utile en dépannage
+     * (ex. verrou de chevauchement resté coincé) ou sur un hébergement où le cron/l'URL
+     * publique n'est pas encore en place.
+     */
+    public function processNow(): void
+    {
+        $before = DB::table('jobs')->count();
+
+        Artisan::call('queue:work', [
+            '--stop-when-empty' => true,
+            '--tries' => 3,
+            '--max-time' => 25,
+        ]);
+
+        $after = DB::table('jobs')->count();
+        $processed = $before - $after;
+
+        session()->flash(
+            'status',
+            $processed > 0
+                ? "{$processed} tâche(s) traitée(s)."
+                : 'Aucune tâche en attente n\'a pu être traitée (voir les tâches échouées ci-dessous s\'il y en a de nouvelles).'
+        );
+    }
+
     public function render()
     {
         $pendingJobs = DB::table('jobs')->orderBy('id')->get()->map(function ($job) {
